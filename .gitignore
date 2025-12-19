@@ -47,6 +47,11 @@ data/historical/*
 !data/logs/.gitkeep
 !data/historical/.gitkeep
 
+# Config files (use .example as templates)
+data/database_settings.json
+data/ldap_settings.json
+data/*.xlsx
+
 # Database files
 *.db
 *.db-journal
@@ -72,3 +77,9 @@ vaas/web/static/dist/
 
 # Claude Code
 .claude/
+
+# Development files (docs, tests, scripts)
+_dev/
+scripts/
+sonar_issues.txt
+*.orig

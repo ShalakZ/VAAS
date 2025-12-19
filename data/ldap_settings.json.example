@@ -1,0 +1,11 @@
+{
+  "LDAP_HOST": "",
+  "LDAP_PORT": 389,
+  "LDAP_USE_SSL": false,
+  "LDAP_BASE_DN": "OU=Users,DC=example,DC=com",
+  "LDAP_SERVICE_USER": "CN=ServiceAccount,CN=Users,DC=example,DC=com",
+  "LDAP_SERVICE_PASS": "",
+  "LDAP_USER_FILTER": "(sAMAccountName={username})",
+  "LDAP_ADMIN_GROUP": "",
+  "LDAP_ENABLED": false
+}
