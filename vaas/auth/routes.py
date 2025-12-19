@@ -12,7 +12,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 from ..config import Config
 from ..constants import (
-    ROUTE_INDEX, ROUTE_LOGIN, LDAP_DEFAULT_USER_FILTER, PASSWORD_MASK,
+    ROUTE_INDEX, ROUTE_LOGIN, LDAP_DEFAULT_USER_FILTER, REDACTED_FIELD_DISPLAY,
     ERROR_ADMIN_REQUIRED, ERROR_INVALID_ROLE
 )
 from ..core.logging_config import AuditLogger, LogLevel
@@ -399,7 +399,7 @@ def ldap_settings_page():
             return redirect(url_for('web.index'))
     
     settings = load_ldap_settings()
-    settings['LDAP_SERVICE_PASS'] = PASSWORD_MASK if settings.get('LDAP_SERVICE_PASS') else ''
+    settings['LDAP_SERVICE_PASS'] = REDACTED_FIELD_DISPLAY if settings.get('LDAP_SERVICE_PASS') else ''
     return render_template('ldap_settings.html', settings=settings)
 
 
@@ -407,7 +407,7 @@ def ldap_settings_page():
 def get_ldap_settings_api():
     """Get LDAP settings (password masked)."""
     settings = load_ldap_settings()
-    settings['LDAP_SERVICE_PASS'] = PASSWORD_MASK if settings.get('LDAP_SERVICE_PASS') else ''
+    settings['LDAP_SERVICE_PASS'] = REDACTED_FIELD_DISPLAY if settings.get('LDAP_SERVICE_PASS') else ''
     return jsonify(settings)
 
 
@@ -426,7 +426,7 @@ def save_ldap_settings_api():
         'LDAP_USE_SSL': data.get('use_ssl', False),
         'LDAP_BASE_DN': data.get('base_dn', '').strip(),
         'LDAP_SERVICE_USER': data.get('service_user', '').strip(),
-        'LDAP_SERVICE_PASS': data.get('service_pass', '').strip() if data.get('service_pass', '') != PASSWORD_MASK else '',
+        'LDAP_SERVICE_PASS': data.get('service_pass', '').strip() if data.get('service_pass', '') != REDACTED_FIELD_DISPLAY else '',
         'LDAP_USER_FILTER': data.get('user_filter', LDAP_DEFAULT_USER_FILTER).strip(),
         'LDAP_ADMIN_GROUP': data.get('admin_group', '').strip(),
         'LDAP_ENABLED': data.get('enabled', False)
@@ -456,7 +456,7 @@ def test_ldap_connection():
         'LDAP_ADMIN_GROUP': data.get('admin_group', '')
     }
     
-    if test_config['LDAP_SERVICE_PASS'] == PASSWORD_MASK:
+    if test_config['LDAP_SERVICE_PASS'] == REDACTED_FIELD_DISPLAY:
         existing = load_ldap_settings()
         test_config['LDAP_SERVICE_PASS'] = existing.get('LDAP_SERVICE_PASS', '')
     

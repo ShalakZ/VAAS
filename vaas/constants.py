@@ -9,7 +9,8 @@ ROUTE_LOGIN = 'auth.login'
 
 # LDAP Constants
 LDAP_DEFAULT_USER_FILTER = '(sAMAccountName={username})'
-PASSWORD_MASK = '********'
+# Display placeholder for hidden/redacted sensitive fields (not a real credential)
+REDACTED_FIELD_DISPLAY = '********'
 
 # Team Names (normalized lowercase for comparison)
 TEAM_SYSADMIN = 'system admin'
