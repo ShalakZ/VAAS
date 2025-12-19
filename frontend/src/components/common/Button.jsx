@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import PropTypes from 'prop-types';
 
 const variants = {
   primary: 'bg-blue-600 text-white hover:bg-blue-700 shadow',
@@ -48,3 +49,12 @@ export const Button = forwardRef(function Button(
     </button>
   );
 });
+
+Button.propTypes = {
+  children: PropTypes.node,
+  variant: PropTypes.oneOf(['primary', 'secondary', 'danger', 'success', 'outline', 'ghost']),
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  disabled: PropTypes.bool,
+  loading: PropTypes.bool,
+  className: PropTypes.string,
+};

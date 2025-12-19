@@ -7,10 +7,15 @@ import os
 import json
 import logging
 from functools import wraps
+from urllib.parse import urlparse, urljoin
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
 
 from ..config import Config
+from ..constants import (
+    ROUTE_INDEX, ROUTE_LOGIN, LDAP_DEFAULT_USER_FILTER, PASSWORD_MASK,
+    ERROR_ADMIN_REQUIRED, ERROR_INVALID_ROLE
+)
 from ..core.logging_config import AuditLogger, LogLevel
 from .ldap_auth import LDAPAuth, User
 from .user_db import UserDB, ROLE_VIEWER, ROLE_SECURITY_ADMIN, ROLE_ADMINISTRATOR, AUTH_TYPE_LOCAL, AUTH_TYPE_LDAP
@@ -18,6 +23,18 @@ from .user_db import UserDB, ROLE_VIEWER, ROLE_SECURITY_ADMIN, ROLE_ADMINISTRATO
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, template_folder='../web/templates')
+
+
+def is_safe_url(target):
+    """
+    Validate that the redirect target URL is safe (internal to the application).
+    Prevents open redirect attacks by ensuring the URL points to the same host.
+    """
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 # LDAP Settings file path
 LDAP_SETTINGS_FILE = os.path.join(Config.DATA_DIR, 'ldap_settings.json')
@@ -48,7 +65,7 @@ def load_ldap_settings():
             'LDAP_BASE_DN': os.environ.get('LDAP_BASE_DN', ''),
             'LDAP_SERVICE_USER': os.environ.get('LDAP_SERVICE_USER', ''),
             'LDAP_SERVICE_PASS': os.environ.get('LDAP_SERVICE_PASS', ''),
-            'LDAP_USER_FILTER': os.environ.get('LDAP_USER_FILTER', '(sAMAccountName={username})'),
+            'LDAP_USER_FILTER': os.environ.get('LDAP_USER_FILTER', LDAP_DEFAULT_USER_FILTER),
             'LDAP_ADMIN_GROUP': os.environ.get('LDAP_ADMIN_GROUP', ''),
             'LDAP_ENABLED': os.environ.get('LDAP_ENABLED', 'false').lower() == 'true',
         }
@@ -63,7 +80,7 @@ def load_ldap_settings():
         'LDAP_BASE_DN': '',
         'LDAP_SERVICE_USER': '',
         'LDAP_SERVICE_PASS': '',
-        'LDAP_USER_FILTER': '(sAMAccountName={username})',
+        'LDAP_USER_FILTER': LDAP_DEFAULT_USER_FILTER,
         'LDAP_ADMIN_GROUP': '',
         'LDAP_ENABLED': False
     }
@@ -180,7 +197,7 @@ def login():
             else:
                 logger.warning(f"LDAP authentication failed for: {username}")
         elif not user:
-            logger.debug(f"LDAP not enabled, cannot try LDAP auth")
+            logger.debug("LDAP not enabled, cannot try LDAP auth")
         
         if user:
             login_user(user)
@@ -190,7 +207,9 @@ def login():
                 details={'username': username, 'auth_type': user.auth_type}
             )
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('web.index'))
+            if not is_safe_url(next_page):
+                next_page = url_for('web.index')
+            return redirect(next_page)
         else:
             flash('Invalid username or password', 'error')
             logger.warning(f"Failed login attempt for: {username}")
@@ -232,7 +251,7 @@ def user_management_page():
         if not current_user.is_authenticated:
             return redirect(url_for('auth.login'))
         if not current_user.is_admin:
-            flash('Admin access required', 'error')
+            flash(ERROR_ADMIN_REQUIRED, 'error')
             return redirect(url_for('web.index'))
     
     users = UserDB.list_users()
@@ -244,7 +263,7 @@ def list_users_api():
     """Get all users."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
     
     users = UserDB.list_users()
     # Don't return password hashes
@@ -258,7 +277,7 @@ def create_user_api():
     """Create a new user."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
     
     data = request.json
     username = data.get('username', '').strip().lower()
@@ -272,7 +291,7 @@ def create_user_api():
     if not password:
         return jsonify({'success': False, 'message': 'Password is required'}), 400
     if role not in [ROLE_VIEWER, ROLE_SECURITY_ADMIN, ROLE_ADMINISTRATOR]:
-        return jsonify({'success': False, 'message': 'Invalid role'}), 400
+        return jsonify({'success': False, 'message': ERROR_INVALID_ROLE}), 400
     
     success, message = UserDB.create_user(
         username=username,
@@ -291,7 +310,7 @@ def update_user_api(user_id):
     """Update a user."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
     
     data = request.json
     display_name = data.get('display_name')
@@ -300,7 +319,7 @@ def update_user_api(user_id):
     is_active = data.get('is_active')
     
     if role and role not in [ROLE_VIEWER, ROLE_SECURITY_ADMIN, ROLE_ADMINISTRATOR]:
-        return jsonify({'success': False, 'message': 'Invalid role'}), 400
+        return jsonify({'success': False, 'message': ERROR_INVALID_ROLE}), 400
     
     success, message = UserDB.update_user(
         user_id=user_id,
@@ -318,7 +337,7 @@ def delete_user_api(user_id):
     """Delete a user."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
     
     # Don't allow deleting yourself
     if current_user.is_authenticated and current_user.user_id == user_id:
@@ -357,11 +376,11 @@ def ldap_settings_page():
         if not current_user.is_authenticated:
             return redirect(url_for('auth.login'))
         if not current_user.is_admin:
-            flash('Admin access required', 'error')
+            flash(ERROR_ADMIN_REQUIRED, 'error')
             return redirect(url_for('web.index'))
     
     settings = load_ldap_settings()
-    settings['LDAP_SERVICE_PASS'] = '********' if settings.get('LDAP_SERVICE_PASS') else ''
+    settings['LDAP_SERVICE_PASS'] = PASSWORD_MASK if settings.get('LDAP_SERVICE_PASS') else ''
     return render_template('ldap_settings.html', settings=settings)
 
 
@@ -369,7 +388,7 @@ def ldap_settings_page():
 def get_ldap_settings_api():
     """Get LDAP settings (password masked)."""
     settings = load_ldap_settings()
-    settings['LDAP_SERVICE_PASS'] = '********' if settings.get('LDAP_SERVICE_PASS') else ''
+    settings['LDAP_SERVICE_PASS'] = PASSWORD_MASK if settings.get('LDAP_SERVICE_PASS') else ''
     return jsonify(settings)
 
 
@@ -378,7 +397,7 @@ def save_ldap_settings_api():
     """Save LDAP settings."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
     
     data = request.json
     
@@ -388,8 +407,8 @@ def save_ldap_settings_api():
         'LDAP_USE_SSL': data.get('use_ssl', False),
         'LDAP_BASE_DN': data.get('base_dn', '').strip(),
         'LDAP_SERVICE_USER': data.get('service_user', '').strip(),
-        'LDAP_SERVICE_PASS': data.get('service_pass', '').strip() if data.get('service_pass', '') != '********' else '',
-        'LDAP_USER_FILTER': data.get('user_filter', '(sAMAccountName={username})').strip(),
+        'LDAP_SERVICE_PASS': data.get('service_pass', '').strip() if data.get('service_pass', '') != PASSWORD_MASK else '',
+        'LDAP_USER_FILTER': data.get('user_filter', LDAP_DEFAULT_USER_FILTER).strip(),
         'LDAP_ADMIN_GROUP': data.get('admin_group', '').strip(),
         'LDAP_ENABLED': data.get('enabled', False)
     }
@@ -414,11 +433,11 @@ def test_ldap_connection():
         'LDAP_BASE_DN': data.get('base_dn', '').strip(),
         'LDAP_SERVICE_USER': data.get('service_user', '').strip(),
         'LDAP_SERVICE_PASS': data.get('service_pass', '').strip(),
-        'LDAP_USER_FILTER': data.get('user_filter', '(sAMAccountName={username})'),
+        'LDAP_USER_FILTER': data.get('user_filter', LDAP_DEFAULT_USER_FILTER),
         'LDAP_ADMIN_GROUP': data.get('admin_group', '')
     }
     
-    if test_config['LDAP_SERVICE_PASS'] == '********':
+    if test_config['LDAP_SERVICE_PASS'] == PASSWORD_MASK:
         existing = load_ldap_settings()
         test_config['LDAP_SERVICE_PASS'] = existing.get('LDAP_SERVICE_PASS', '')
     
@@ -433,7 +452,7 @@ def search_ad_users():
     """Search for users in Active Directory."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
     
     if not is_ldap_enabled():
         return jsonify({'success': False, 'message': 'LDAP is not enabled'}), 400
@@ -460,7 +479,7 @@ def import_ad_user():
     """Import an AD user to the local database."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
     
     if not is_ldap_enabled():
         return jsonify({'success': False, 'message': 'LDAP is not enabled'}), 400
@@ -473,7 +492,7 @@ def import_ad_user():
         return jsonify({'success': False, 'message': 'Username is required'}), 400
     
     if role not in [ROLE_VIEWER, ROLE_SECURITY_ADMIN, ROLE_ADMINISTRATOR]:
-        return jsonify({'success': False, 'message': 'Invalid role'}), 400
+        return jsonify({'success': False, 'message': ERROR_INVALID_ROLE}), 400
     
     # Check if user already exists
     existing = UserDB.get_user_by_username(username)

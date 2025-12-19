@@ -287,7 +287,7 @@ function AppContent() {
     try {
       const result = await kbService.importKb(file);
       alert(result.message + '\n\nPage will reload to reflect changes.');
-      window.location.reload();
+      globalThis.location.reload();
     } catch (err) {
       alert(err.message);
     } finally {
@@ -381,8 +381,8 @@ function AppContent() {
 }
 
 function App() {
-  // Get config from window if available (set by Flask template)
-  const config = window.__VAAS_CONFIG__ || {};
+  // Get config from globalThis if available (set by Flask template)
+  const config = globalThis.__VAAS_CONFIG__ || {};
 
   return (
     <ConfigProvider config={config}>

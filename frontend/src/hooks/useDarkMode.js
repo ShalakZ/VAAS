@@ -12,7 +12,7 @@ export function useDarkMode() {
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    const root = globalThis.document.documentElement;
 
     if (theme === 'dark') {
       root.classList.add('dark');

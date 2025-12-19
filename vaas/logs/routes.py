@@ -5,7 +5,7 @@ API endpoints and UI for viewing and managing application logs.
 
 import os
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, render_template, send_file
 from flask_login import current_user
 
@@ -233,7 +233,7 @@ def export_logs():
         csv_bytes = io.BytesIO(output.getvalue().encode('utf-8'))
 
         # Generate filename with timestamp
-        filename = f"vaas_logs_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"vaas_logs_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
 
         return send_file(
             csv_bytes,

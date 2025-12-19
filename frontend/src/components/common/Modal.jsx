@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 export function Modal({ isOpen, onClose, title, children, footer, maxWidth = 'max-w-4xl' }) {
   // Close on escape key
@@ -55,3 +56,12 @@ export function Modal({ isOpen, onClose, title, children, footer, maxWidth = 'ma
     </div>
   );
 }
+
+Modal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string,
+  children: PropTypes.node,
+  footer: PropTypes.node,
+  maxWidth: PropTypes.string,
+};

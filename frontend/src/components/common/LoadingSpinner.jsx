@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 export function LoadingSpinner({ size = 'md', className = '' }) {
   const sizes = {
     sm: 'h-4 w-4',
@@ -38,9 +40,9 @@ export function GearAnimation() {
         <circle cx="35" cy="45" r="8" fill="#1e40af" />
         <circle cx="35" cy="45" r="4" fill="#60a5fa" />
         {/* Gear teeth */}
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
           <rect
-            key={i}
+            key={`lg-tooth-${angle}`}
             x="32"
             y="20"
             width="6"
@@ -57,9 +59,9 @@ export function GearAnimation() {
         <circle cx="68" cy="62" r="5" fill="#3b82f6" />
         <circle cx="68" cy="62" r="2.5" fill="#93c5fd" />
         {/* Gear teeth */}
-        {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+        {[0, 60, 120, 180, 240, 300].map((angle) => (
           <rect
-            key={i}
+            key={`sm-tooth-${angle}`}
             x="66"
             y="44"
             width="4"
@@ -73,3 +75,8 @@ export function GearAnimation() {
     </svg>
   );
 }
+
+LoadingSpinner.propTypes = {
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  className: PropTypes.string,
+};

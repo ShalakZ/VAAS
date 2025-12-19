@@ -7,7 +7,7 @@ import os
 import json
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List, Any
 from contextlib import contextmanager
 from flask import request
@@ -135,7 +135,7 @@ class LogDatabase:
             with LogDatabase.get_db() as conn:
                 cursor = conn.cursor()
 
-                timestamp = datetime.utcnow().isoformat()
+                timestamp = datetime.now(timezone.utc).isoformat()
                 details_json = json.dumps(details) if details else None
 
                 cursor.execute('''
@@ -273,7 +273,7 @@ class LogDatabase:
         Args:
             days: Number of days to retain logs
         """
-        cutoff_date = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
         with LogDatabase.get_db() as conn:
             cursor = conn.cursor()
@@ -310,7 +310,7 @@ class LogDatabase:
             by_level = {row[0]: row[1] for row in cursor.fetchall()}
 
             # Recent activity (last 24 hours)
-            yesterday = (datetime.utcnow() - timedelta(days=1)).isoformat()
+            yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
             cursor.execute("SELECT COUNT(*) FROM logs WHERE timestamp >= ?", (yesterday,))
             recent = cursor.fetchone()[0]
 
@@ -341,7 +341,8 @@ class AuditLogger:
                 'endpoint': request.endpoint if request else None,
                 'method': request.method if request else None,
             }
-        except:
+        except RuntimeError:
+            # Outside of request context
             return {}
 
     @staticmethod
@@ -350,7 +351,8 @@ class AuditLogger:
         try:
             if current_user and current_user.is_authenticated:
                 return current_user.username
-        except:
+        except RuntimeError:
+            # Outside of application context
             pass
         return 'anonymous'
 

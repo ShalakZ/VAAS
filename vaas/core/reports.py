@@ -191,7 +191,7 @@ class ReportsDB:
                 if item_row[7]:
                     try:
                         original_data = json.loads(item_row[7])
-                    except:
+                    except (json.JSONDecodeError, TypeError):
                         original_data = item_row[7]
 
                 report['items'].append({
@@ -372,7 +372,7 @@ class ReportsDB:
                 if row[7]:
                     try:
                         original_data = json.loads(row[7])
-                    except:
+                    except (json.JSONDecodeError, TypeError):
                         original_data = row[7]
 
                 items.append({

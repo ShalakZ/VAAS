@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { GearAnimation } from './LoadingSpinner';
 
 export function LoadingOverlay({ message = 'Processing...', show = false }) {
@@ -19,3 +20,8 @@ export function LoadingOverlay({ message = 'Processing...', show = false }) {
     </div>
   );
 }
+
+LoadingOverlay.propTypes = {
+  message: PropTypes.string,
+  show: PropTypes.bool,
+};

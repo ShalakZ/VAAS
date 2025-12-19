@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import PropTypes from 'prop-types';
 
 export const Select = forwardRef(function Select(
   {
@@ -39,3 +40,21 @@ export const Select = forwardRef(function Select(
     </select>
   );
 });
+
+Select.propTypes = {
+  options: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({
+        value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        label: PropTypes.string,
+      }),
+    ])
+  ),
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func,
+  disabled: PropTypes.bool,
+  placeholder: PropTypes.string,
+  className: PropTypes.string,
+  highlight: PropTypes.bool,
+};

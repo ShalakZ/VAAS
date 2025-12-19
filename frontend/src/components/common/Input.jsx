@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import PropTypes from 'prop-types';
 
 export const Input = forwardRef(function Input(
   {
@@ -32,3 +33,16 @@ export function FilterInput({ value, onChange, placeholder, onClick, className =
     />
   );
 }
+
+Input.propTypes = {
+  type: PropTypes.string,
+  className: PropTypes.string,
+};
+
+FilterInput.propTypes = {
+  value: PropTypes.string,
+  onChange: PropTypes.func,
+  placeholder: PropTypes.string,
+  onClick: PropTypes.func,
+  className: PropTypes.string,
+};

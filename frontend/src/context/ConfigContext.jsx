@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 const ConfigContext = createContext(null);
 
@@ -30,7 +31,7 @@ export function ConfigProvider({ children, config: initialConfig }) {
         // Check if authentication is required but user is not authenticated
         if (data.requiresAuth && data.redirectUrl) {
           // Redirect to login page
-          window.location.href = data.redirectUrl;
+          globalThis.location.href = data.redirectUrl;
           return;
         }
 
@@ -66,6 +67,21 @@ export function ConfigProvider({ children, config: initialConfig }) {
     </ConfigContext.Provider>
   );
 }
+
+ConfigProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+  config: PropTypes.shape({
+    teamsList: PropTypes.arrayOf(PropTypes.string),
+    permissions: PropTypes.shape({
+      canModify: PropTypes.bool,
+      canModifyKb: PropTypes.bool,
+      canExport: PropTypes.bool,
+      canManageUsers: PropTypes.bool,
+      role: PropTypes.string,
+    }),
+    userInfo: PropTypes.object,
+  }),
+};
 
 export function useConfig() {
   const context = useContext(ConfigContext);

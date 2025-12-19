@@ -76,14 +76,14 @@ export const exportService = {
   },
 
   downloadBlob(blob, filename) {
-    const url = window.URL.createObjectURL(blob);
+    const url = globalThis.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    window.URL.revokeObjectURL(url);
+    globalThis.URL.revokeObjectURL(url);
   }
 };
 
@@ -172,6 +172,6 @@ export const kbService = {
   },
 
   exportKb() {
-    window.location.href = '/kb/export';
+    globalThis.location.href = '/kb/export';
   }
 };

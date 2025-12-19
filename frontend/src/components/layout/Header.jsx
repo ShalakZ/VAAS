@@ -1,4 +1,4 @@
-import { Button } from '../common';
+import PropTypes from 'prop-types';
 
 export function Header({
   view,
@@ -85,3 +85,15 @@ export function Header({
     </header>
   );
 }
+
+Header.propTypes = {
+  view: PropTypes.string,
+  setView: PropTypes.func,
+  currentFileName: PropTypes.string,
+  hasData: PropTypes.bool,
+  theme: PropTypes.string,
+  toggleTheme: PropTypes.func,
+  onSidebarOpen: PropTypes.func,
+  onNewAnalysis: PropTypes.func,
+  onKbClick: PropTypes.func,
+};

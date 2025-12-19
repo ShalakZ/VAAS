@@ -192,7 +192,7 @@ class LDAPAuth:
                 auto_bind=True
             )
             user_conn.unbind()
-            logger.debug(f"LDAP Auth: User bind successful!")
+            logger.debug("LDAP Auth: User bind successful!")
             
             logger.info(f"LDAP user authenticated successfully: {username}")
             

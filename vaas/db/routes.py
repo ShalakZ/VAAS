@@ -7,6 +7,7 @@ import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import current_user
 
+from ..constants import ERROR_ADMIN_REQUIRED
 from .settings import (
     load_database_settings,
     save_database_settings,
@@ -34,7 +35,7 @@ def database_settings_page():
         if not current_user.is_authenticated:
             return redirect(url_for('auth.login'))
         if not getattr(current_user, 'is_admin', False):
-            flash('Admin access required', 'error')
+            flash(ERROR_ADMIN_REQUIRED, 'error')
             return redirect(url_for('web.index'))
 
     settings = load_database_settings()
@@ -63,7 +64,7 @@ def save_database_settings_api():
     """Save database settings."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
 
     data = request.json
     from ..config import Config
@@ -166,7 +167,7 @@ def migrate_database_api():
     """Migrate data from SQLite to external database."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
 
     data = request.json
     confirm = data.get('confirm', False)
@@ -244,7 +245,7 @@ def update_scheduler_settings():
     """Update scheduler settings."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
 
     data = request.json
 
@@ -281,7 +282,7 @@ def run_scheduler_now():
     """Trigger immediate cleanup."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
 
     try:
         from ..core.scheduler import run_cleanup_now
@@ -305,7 +306,7 @@ def restart_scheduler_api():
     """Restart the scheduler."""
     if is_auth_enabled():
         if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-            return jsonify({'success': False, 'message': 'Admin access required'}), 403
+            return jsonify({'success': False, 'message': ERROR_ADMIN_REQUIRED}), 403
 
     try:
         from ..core.scheduler import restart_scheduler

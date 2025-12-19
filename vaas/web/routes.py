@@ -10,6 +10,7 @@ from flask_login import current_user, login_required as flask_login_required
 from werkzeug.utils import secure_filename
 
 from ..config import Config
+from ..constants import ERROR_ADMIN_REQUIRED, ERROR_INVALID_RULE_TYPE
 from ..core import RuleEngine, KnowledgeBase
 from ..core.reports import ReportsDB
 from ..core.logging_config import AuditLogger, LogLevel, LogCategory
@@ -353,7 +354,7 @@ def add_rule():
     elif rule_type == 'title':
         success, msg = KnowledgeBase.add_title_rule(key, team)
     else:
-        return jsonify({'success': False, 'message': 'Invalid rule type'}), 400
+        return jsonify({'success': False, 'message': ERROR_INVALID_RULE_TYPE}), 400
 
     if success:
         classifier.reload_rules()
@@ -629,7 +630,7 @@ def edit_rule():
     elif rule_type == 'title':
         success, msg = KnowledgeBase.edit_title_rule(old_key, new_key, new_team)
     else:
-        return jsonify({'success': False, 'message': 'Invalid rule type'}), 400
+        return jsonify({'success': False, 'message': ERROR_INVALID_RULE_TYPE}), 400
 
     if success:
         classifier.reload_rules()
@@ -653,7 +654,7 @@ def delete_rule():
     elif rule_type == 'title':
         success, msg = KnowledgeBase.delete_title_rule(key)
     else:
-        return jsonify({'success': False, 'message': 'Invalid rule type'}), 400
+        return jsonify({'success': False, 'message': ERROR_INVALID_RULE_TYPE}), 400
 
     if success:
         classifier.reload_rules()
@@ -843,7 +844,7 @@ def get_db_duplicates():
     from ..core.db_optimizer import DatabaseOptimizer
 
     if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        return jsonify({'success': False, 'error': ERROR_ADMIN_REQUIRED}), 403
 
     try:
         duplicates = DatabaseOptimizer.find_duplicate_reports()
@@ -872,7 +873,7 @@ def cleanup_database():
     from ..core.db_optimizer import DatabaseOptimizer
 
     if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        return jsonify({'success': False, 'error': ERROR_ADMIN_REQUIRED}), 403
 
     data = request.get_json() or {}
 
@@ -916,7 +917,7 @@ def vacuum_database():
     from ..core.db_optimizer import DatabaseOptimizer
 
     if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        return jsonify({'success': False, 'error': ERROR_ADMIN_REQUIRED}), 403
 
     try:
         success, message = DatabaseOptimizer.vacuum_database()

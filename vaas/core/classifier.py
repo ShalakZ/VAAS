@@ -6,6 +6,11 @@ import logging
 import pandas as pd
 import re
 from ..config import Config
+from ..constants import (
+    TEAM_SYSADMIN, TEAM_APPLICATION, TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE, TEAM_UNCLASSIFIED,
+    TEAM_SYSADMIN_DISPLAY, TEAM_APPLICATION_DISPLAY, TEAM_LINUX_SCOPE_DISPLAY,
+    TEAM_PLATFORM_SCOPE_DISPLAY, TEAM_UNCLASSIFIED_DISPLAY
+)
 from .knowledge import KnowledgeBase
 from rapidfuzz import process, fuzz
 
@@ -50,15 +55,15 @@ class RuleEngine:
 
         # Performance Optimization: Cache priority team keys at index build time
         # This eliminates repeated lookups in _classify_single_row (5-10% performance improvement)
-        self._cached_app_key = next((t for t in self.rules.keys() if normalize_team_key(t) == 'application'), None)
-        self._cached_sysadmin_key = next((t for t in self.rules.keys() if normalize_team_key(t) == 'system admin'), None)
+        self._cached_app_key = next((t for t in self.rules.keys() if normalize_team_key(t) == TEAM_APPLICATION), None)
+        self._cached_sysadmin_key = next((t for t in self.rules.keys() if normalize_team_key(t) == TEAM_SYSADMIN), None)
         self._cached_scope_key = (
-            next((t for t in self.rules.keys() if normalize_team_key(t) == 'out of linux scope'), None) or
-            next((t for t in self.rules.keys() if normalize_team_key(t) == 'out of platform scope'), None)
+            next((t for t in self.rules.keys() if normalize_team_key(t) == TEAM_LINUX_SCOPE), None) or
+            next((t for t in self.rules.keys() if normalize_team_key(t) == TEAM_PLATFORM_SCOPE), None)
         )
 
         # Cache priority teams list (lowercase)
-        self._priority_teams_lower = ['application', 'system admin', 'out of linux scope', 'out of platform scope']
+        self._priority_teams_lower = [TEAM_APPLICATION, TEAM_SYSADMIN, TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]
 
         # 1. Load Application First (Weakest - will be overwritten)
         if self._cached_app_key:
@@ -82,7 +87,7 @@ class RuleEngine:
                     self.normalized_patterns[pattern_clean] = self._normalize_str(pattern)
 
         # 3. Load Out of Scope (Medium-high priority)
-        for scope_name in ['out of linux scope', 'out of platform scope']:
+        for scope_name in [TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]:
             scope_key = next((t for t in self.rules.keys() if normalize_team_key(t) == scope_name), None)
             if scope_key:
                 for r in self.rules[scope_key]:
@@ -93,7 +98,7 @@ class RuleEngine:
                         self.normalized_patterns[pattern_clean] = self._normalize_str(pattern)
 
         # 4. Load System Admin LAST (highest priority - overwrites everything)
-        for sysadmin_name in ['system admin', 'systemadmin', 'sysadmin']:
+        for sysadmin_name in [TEAM_SYSADMIN, 'systemadmin', 'sysadmin']:
             sysadmin_key = next((t for t in self.rules.keys() if normalize_team_key(t) == sysadmin_name), None)
             if sysadmin_key:
                 for r in self.rules[sysadmin_key]:
@@ -164,7 +169,7 @@ class RuleEngine:
             if regex:
                 try:
                     if re.search(regex, title, re.IGNORECASE):
-                        return team_name, f"Title matches regex pattern"
+                        return team_name, "Title matches regex pattern"
                 except re.error:
                     pass
 
@@ -222,7 +227,7 @@ class RuleEngine:
         if matched_team:
             team_lower = matched_team.strip().lower()
 
-            if team_lower == 'application':
+            if team_lower == TEAM_APPLICATION:
                 # Check Hostname mapping for Application vulns
                 host_owner = self.hostname_map.get(hostname_lower)
 
@@ -239,7 +244,7 @@ class RuleEngine:
                     result['Method'] = 'Rule'
                     result['Matched_Rule'] = rule_desc
 
-            elif team_lower in ['system admin', 'out of linux scope', 'out of platform scope']:
+            elif team_lower in [TEAM_SYSADMIN, TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]:
                 result['Assigned_Team'] = self._normalize_team_name(matched_team)
                 result['Reason'] = rule_desc
                 result['Needs_Review'] = False
@@ -274,11 +279,11 @@ class RuleEngine:
                 for pat, scr in good_matches:
                     team = self.fuzzy_candidates[pat]
                     team_lower = team.lower() if team else ''
-                    if team_lower == 'system admin':
+                    if team_lower == TEAM_SYSADMIN:
                         sysadmin_matches.append((pat, scr, team))
-                    elif team_lower in ['out of linux scope', 'out of platform scope']:
+                    elif team_lower in [TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]:
                         scope_matches.append((pat, scr, team))
-                    elif team_lower == 'application':
+                    elif team_lower == TEAM_APPLICATION:
                         app_matches.append((pat, scr, team))
                     else:
                         other_matches.append((pat, scr, team))
@@ -304,7 +309,7 @@ class RuleEngine:
                     result['Needs_Review'] = True  # Fuzzy matches always need review
 
                     # Handle Application fuzzy match - try hostname lookup
-                    if team_lower == 'application':
+                    if team_lower == TEAM_APPLICATION:
                         host_owner = self.hostname_map.get(hostname_lower)
                         if host_owner and host_owner.lower() not in ['nan', 'none', '']:
                             result['Assigned_Team'] = self._normalize_team_name(host_owner)
@@ -324,14 +329,14 @@ class RuleEngine:
     def _normalize_team_name(self, team_name):
         """Normalize team name to standard casing."""
         if not team_name:
-            return 'Unclassified'
+            return TEAM_UNCLASSIFIED_DISPLAY
         team_lower = team_name.strip().lower()
         standard_names = {
-            'system admin': 'System Admin',
-            'application': 'Application',
-            'out of linux scope': 'Out of Linux Scope',
-            'out of platform scope': 'Out of Platform Scope',
-            'unclassified': 'Unclassified',
+            TEAM_SYSADMIN: TEAM_SYSADMIN_DISPLAY,
+            TEAM_APPLICATION: TEAM_APPLICATION_DISPLAY,
+            TEAM_LINUX_SCOPE: TEAM_LINUX_SCOPE_DISPLAY,
+            TEAM_PLATFORM_SCOPE: TEAM_PLATFORM_SCOPE_DISPLAY,
+            TEAM_UNCLASSIFIED: TEAM_UNCLASSIFIED_DISPLAY,
         }
         return standard_names.get(team_lower, team_name)
 

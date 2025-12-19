@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 export function ProgressBar({ progress, color = 'blue', className = '' }) {
   const colors = {
     blue: 'bg-blue-600',
@@ -57,3 +59,18 @@ export function ExportButton({ onClick, disabled, isExporting, label, exportingL
     </button>
   );
 }
+
+ProgressBar.propTypes = {
+  progress: PropTypes.number,
+  color: PropTypes.oneOf(['blue', 'green', 'yellow', 'red']),
+  className: PropTypes.string,
+};
+
+ExportButton.propTypes = {
+  onClick: PropTypes.func,
+  disabled: PropTypes.bool,
+  isExporting: PropTypes.oneOfType([PropTypes.bool, PropTypes.number]),
+  label: PropTypes.string,
+  exportingLabel: PropTypes.string,
+  color: PropTypes.oneOf(['blue', 'green']),
+};
