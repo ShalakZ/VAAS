@@ -1,0 +1,30 @@
+# Python 3.9+ required
+
+# Core Framework
+flask>=3.0.0
+flask-login>=0.6.3
+werkzeug>=3.0.0
+gunicorn>=21.2.0
+
+# Data Processing
+pandas>=2.1.0
+openpyxl>=3.1.2
+
+# Classification
+rapidfuzz>=3.0.0
+
+# Authentication
+ldap3>=2.9.1
+bcrypt>=4.0.0
+
+# Database Drivers
+# SQLite: Built into Python (no extra package needed)
+
+# MySQL/MariaDB (optional)
+mysql-connector-python>=8.0.0
+
+# PostgreSQL (optional)
+psycopg2-binary>=2.9.0
+
+# SQL Server / Azure SQL (optional)
+pyodbc>=4.0.0

@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* Configure dark mode to use class selector instead of media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Custom dark mode styles */
+.dark .drag-active {
+  background-color: #1e3a8a;
+  border-color: #60a5fa;
+}
+
+.dark th:hover {
+  background-color: #374151;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.dark input::placeholder {
+  color: #9ca3af;
+}
+
+.dark select {
+  color-scheme: dark;
+}
+
+.dark thead,
+.dark th {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+.dark tbody tr:hover {
+  background-color: #374151;
+}
+
+/* Gear Animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.gear-spin {
+  animation: spin 3s linear infinite;
+}
+
+.gear-spin-reverse {
+  animation: spin 2s linear infinite reverse;
+}
+
+/* Progress Animation */
+@keyframes fillProgress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+/* Base styles */
+.drag-active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+th {
+  cursor: pointer;
+  user-select: none;
+}
+
+th:hover {
+  background-color: #e5e7eb;
+}

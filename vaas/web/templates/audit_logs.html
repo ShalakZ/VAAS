@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs - VAAS</title>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <style>
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #3b82f6;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #3b82f6;
+        }
+
+        .log-table {
+            font-size: 0.875rem;
+        }
+
+        .log-row:hover {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-7xl mx-auto py-8 px-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to App
+                </a>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">Audit Logs</h1>
+            <div></div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-500">Total Logs</div>
+                <div class="text-2xl font-bold text-gray-800" id="stat-total">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-500">Last 24 Hours</div>
+                <div class="text-2xl font-bold text-blue-600" id="stat-24h">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-500">Database Size</div>
+                <div class="text-2xl font-bold text-green-600" id="stat-size">-</div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="text-sm text-gray-500">Active Filters</div>
+                <div class="text-2xl font-bold text-purple-600" id="stat-filters">0</div>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="bg-white rounded-xl shadow-lg">
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button data-tab="viewer"
+                        class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-blue-600 text-blue-600">
+                        Log Viewer
+                    </button>
+                    <button data-tab="filters"
+                        class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        Filters
+                    </button>
+                    <button data-tab="maintenance"
+                        class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        Maintenance
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6">
+                <!-- Log Viewer Tab -->
+                <div id="tab-viewer" class="tab-content">
+                    <!-- Controls -->
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="auto-refresh" class="w-4 h-4 text-blue-600 rounded">
+                                <label for="auto-refresh" class="text-sm text-gray-700">Auto-refresh</label>
+                            </div>
+                            <select id="refresh-interval"
+                                class="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
+                                disabled>
+                                <option value="5">5s</option>
+                                <option value="10" selected>10s</option>
+                                <option value="30">30s</option>
+                                <option value="60">60s</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-refresh"
+                                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                    </path>
+                                </svg>
+                                Refresh
+                            </button>
+                            <button id="btn-export"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                                Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Filters -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button class="quick-filter px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                            data-category="all">
+                            All Logs
+                        </button>
+                        <button class="quick-filter px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                            data-category="audit">
+                            Audit
+                        </button>
+                        <button class="quick-filter px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                            data-category="security">
+                            Security
+                        </button>
+                        <button class="quick-filter px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                            data-category="auth">
+                            Authentication
+                        </button>
+                        <button class="quick-filter px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                            data-category="application">
+                            Application
+                        </button>
+                        <button class="quick-filter px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                            data-category="database">
+                            Database
+                        </button>
+                        <button class="quick-filter px-3 py-1 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+                            data-category="system">
+                            System
+                        </button>
+                    </div>
+
+                    <!-- Logs Table -->
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="min-w-full log-table">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                        Category</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Level
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                        Message</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                        IP/Endpoint</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body" class="divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                                        <div class="spinner mx-auto mb-2"></div>
+                                        Loading logs...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span id="showing-from">0</span> to <span id="showing-to">0</span> of <span
+                                id="total-logs">0</span> logs
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="btn-prev"
+                                class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                                Previous
+                            </button>
+                            <button id="btn-next"
+                                class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters Tab -->
+                <div id="tab-filters" class="tab-content hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Category Filter -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select id="filter-category"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+
+                        <!-- Level Filter -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Log Level</label>
+                            <select id="filter-level"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Levels</option>
+                            </select>
+                        </div>
+
+                        <!-- Username Filter -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <input type="text" id="filter-username" placeholder="Filter by username"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Search Filter -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                            <input type="text" id="filter-search" placeholder="Search in messages"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Start Date -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                            <input type="datetime-local" id="filter-start-date"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- End Date -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                            <input type="datetime-local" id="filter-end-date"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Results Per Page -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Results Per Page</label>
+                            <select id="filter-limit"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="50">50</option>
+                                <option value="100" selected>100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 mt-6 pt-6 border-t">
+                        <button id="btn-apply-filters"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z">
+                                </path>
+                            </svg>
+                            Apply Filters
+                        </button>
+                        <button id="btn-clear-filters"
+                            class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Maintenance Tab -->
+                <div id="tab-maintenance" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <!-- Cleanup Section -->
+                        <div class="border rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Log Cleanup</h3>
+                            <p class="text-sm text-gray-600 mb-4">Remove old logs to free up database space and improve
+                                performance.</p>
+
+                            <div class="flex items-end gap-4">
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Retention Period
+                                        (days)</label>
+                                    <input type="number" id="cleanup-days" value="90" min="1"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <p class="text-xs text-gray-500 mt-1">Logs older than this will be deleted</p>
+                                </div>
+                                <button id="btn-cleanup"
+                                    class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                        </path>
+                                    </svg>
+                                    Clean Up Logs
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Statistics Section -->
+                        <div class="border rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Log Statistics</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-700 mb-2">By Category</h4>
+                                    <div id="stats-by-category" class="space-y-1 text-sm text-gray-600">
+                                        Loading...
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-700 mb-2">By Level</h4>
+                                    <div id="stats-by-level" class="space-y-1 text-sm text-gray-600">
+                                        Loading...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Section -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h3 class="font-medium text-blue-800 mb-2">Best Practices</h3>
+                            <ul class="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                                <li>Regularly export logs for long-term archival</li>
+                                <li>Keep 90 days of logs for compliance and troubleshooting</li>
+                                <li>Monitor security logs for unusual activity</li>
+                                <li>Review audit logs to track user actions</li>
+                                <li>Clean up old logs periodically to maintain performance</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="status-message" class="mt-4 text-center text-sm"></div>
+    </div>
+
+    <script>
+        // State
+        let currentPage = 0;
+        let limit = 100;
+        let totalLogs = 0;
+        let autoRefreshInterval = null;
+        let filters = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTabs();
+            loadCategories();
+            loadLevels();
+            loadStatistics();
+            loadLogs();
+            setupEventListeners();
+        });
+
+        function initializeTabs() {
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    switchTab(tab);
+                });
+            });
+        }
+
+        function switchTab(tab) {
+            // Update buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                if (btn.dataset.tab === tab) {
+                    btn.classList.remove('border-transparent', 'text-gray-500');
+                    btn.classList.add('border-blue-600', 'text-blue-600');
+                } else {
+                    btn.classList.remove('border-blue-600', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                }
+            });
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+        }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch('/settings/api/logs/categories');
+                const data = await res.json();
+                if (data.success) {
+                    const select = document.getElementById('filter-category');
+                    data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.value;
+                        option.textContent = cat.label;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load categories:', err);
+            }
+        }
+
+        async function loadLevels() {
+            try {
+                const res = await fetch('/settings/api/logs/levels');
+                const data = await res.json();
+                if (data.success) {
+                    const select = document.getElementById('filter-level');
+                    data.levels.forEach(lvl => {
+                        const option = document.createElement('option');
+                        option.value = lvl.value;
+                        option.textContent = lvl.label;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load levels:', err);
+            }
+        }
+
+        async function loadStatistics() {
+            try {
+                const res = await fetch('/settings/api/logs/statistics');
+                const data = await res.json();
+                if (data.success) {
+                    const stats = data.statistics;
+                    document.getElementById('stat-total').textContent = stats.total_logs.toLocaleString();
+                    document.getElementById('stat-24h').textContent = stats.last_24h.toLocaleString();
+                    document.getElementById('stat-size').textContent = stats.database_size_mb + ' MB';
+
+                    // Update detailed stats
+                    const byCategory = document.getElementById('stats-by-category');
+                    byCategory.innerHTML = Object.entries(stats.by_category)
+                        .map(([cat, count]) => `<div>${cat}: <strong>${count.toLocaleString()}</strong></div>`)
+                        .join('');
+
+                    const byLevel = document.getElementById('stats-by-level');
+                    byLevel.innerHTML = Object.entries(stats.by_level)
+                        .map(([lvl, count]) => `<div>${lvl}: <strong>${count.toLocaleString()}</strong></div>`)
+                        .join('');
+                }
+            } catch (err) {
+                console.error('Failed to load statistics:', err);
+            }
+        }
+
+        async function loadLogs() {
+            const tbody = document.getElementById('logs-table-body');
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500"><div class="spinner mx-auto mb-2"></div>Loading logs...</td></tr>';
+
+            try {
+                const params = new URLSearchParams({
+                    limit: limit,
+                    offset: currentPage * limit,
+                    ...filters
+                });
+
+                const res = await fetch(`/settings/api/logs?${params}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    totalLogs = data.total;
+                    renderLogs(data.logs);
+                    updatePagination();
+                } else {
+                    showError('Failed to load logs: ' + data.error);
+                }
+            } catch (err) {
+                showError('Error loading logs: ' + err.message);
+            }
+        }
+
+        function renderLogs(logs) {
+            const tbody = document.getElementById('logs-table-body');
+
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No logs found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = logs.map(log => {
+                const time = new Date(log.timestamp).toLocaleString();
+                const levelColor = getLevelColor(log.level);
+                const categoryBadge = getCategoryBadge(log.category);
+
+                return `
+                    <tr class="log-row cursor-pointer" onclick='showLogDetails(${JSON.stringify(log)})'>
+                        <td class="px-4 py-3 text-xs text-gray-600">${time}</td>
+                        <td class="px-4 py-3">${categoryBadge}</td>
+                        <td class="px-4 py-3"><span class="badge ${levelColor}">${log.level}</span></td>
+                        <td class="px-4 py-3 text-gray-700">${escapeHtml(log.message)}</td>
+                        <td class="px-4 py-3 text-xs text-gray-600">${log.username || '-'}</td>
+                        <td class="px-4 py-3 text-xs text-gray-600">
+                            ${log.ip_address || '-'}<br>
+                            ${log.endpoint ? '<span class="text-gray-400">' + log.endpoint + '</span>' : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getLevelColor(level) {
+            const colors = {
+                'DEBUG': 'bg-gray-100 text-gray-800',
+                'INFO': 'bg-blue-100 text-blue-800',
+                'WARNING': 'bg-yellow-100 text-yellow-800',
+                'ERROR': 'bg-red-100 text-red-800',
+                'CRITICAL': 'bg-purple-100 text-purple-800'
+            };
+            return colors[level] || 'bg-gray-100 text-gray-800';
+        }
+
+        function getCategoryBadge(category) {
+            const colors = {
+                'application': 'bg-blue-100 text-blue-800',
+                'audit': 'bg-green-100 text-green-800',
+                'security': 'bg-red-100 text-red-800',
+                'system': 'bg-purple-100 text-purple-800',
+                'database': 'bg-yellow-100 text-yellow-800',
+                'auth': 'bg-indigo-100 text-indigo-800'
+            };
+            const color = colors[category] || 'bg-gray-100 text-gray-800';
+            return `<span class="badge ${color}">${category}</span>`;
+        }
+
+        function updatePagination() {
+            const from = currentPage * limit + 1;
+            const to = Math.min((currentPage + 1) * limit, totalLogs);
+
+            document.getElementById('showing-from').textContent = totalLogs > 0 ? from : 0;
+            document.getElementById('showing-to').textContent = to;
+            document.getElementById('total-logs').textContent = totalLogs.toLocaleString();
+
+            document.getElementById('btn-prev').disabled = currentPage === 0;
+            document.getElementById('btn-next').disabled = to >= totalLogs;
+        }
+
+        function setupEventListeners() {
+            // Pagination
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                if (currentPage > 0) {
+                    currentPage--;
+                    loadLogs();
+                }
+            });
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                if ((currentPage + 1) * limit < totalLogs) {
+                    currentPage++;
+                    loadLogs();
+                }
+            });
+
+            // Refresh
+            document.getElementById('btn-refresh').addEventListener('click', () => {
+                loadLogs();
+                loadStatistics();
+            });
+
+            // Auto-refresh
+            document.getElementById('auto-refresh').addEventListener('change', (e) => {
+                const interval = parseInt(document.getElementById('refresh-interval').value) * 1000;
+                document.getElementById('refresh-interval').disabled = !e.target.checked;
+
+                if (e.target.checked) {
+                    autoRefreshInterval = setInterval(() => {
+                        loadLogs();
+                        loadStatistics();
+                    }, interval);
+                } else {
+                    clearInterval(autoRefreshInterval);
+                }
+            });
+
+            document.getElementById('refresh-interval').addEventListener('change', (e) => {
+                if (document.getElementById('auto-refresh').checked) {
+                    clearInterval(autoRefreshInterval);
+                    const interval = parseInt(e.target.value) * 1000;
+                    autoRefreshInterval = setInterval(() => {
+                        loadLogs();
+                        loadStatistics();
+                    }, interval);
+                }
+            });
+
+            // Quick filters
+            document.querySelectorAll('.quick-filter').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const category = btn.dataset.category;
+                    filters = category === 'all' ? {} : { category };
+                    currentPage = 0;
+                    updateFilterCount();
+                    loadLogs();
+
+                    // Update button styles
+                    document.querySelectorAll('.quick-filter').forEach(b => {
+                        b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                        b.classList.add('border-gray-300');
+                    });
+                    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                    btn.classList.remove('border-gray-300');
+                });
+            });
+
+            // Apply filters
+            document.getElementById('btn-apply-filters').addEventListener('click', applyFilters);
+            document.getElementById('btn-clear-filters').addEventListener('click', clearFilters);
+
+            // Export
+            document.getElementById('btn-export').addEventListener('click', exportLogs);
+
+            // Cleanup
+            document.getElementById('btn-cleanup').addEventListener('click', cleanupLogs);
+
+            // Limit change
+            document.getElementById('filter-limit').addEventListener('change', (e) => {
+                limit = parseInt(e.target.value);
+                currentPage = 0;
+                loadLogs();
+            });
+        }
+
+        function applyFilters() {
+            filters = {};
+
+            const category = document.getElementById('filter-category').value;
+            const level = document.getElementById('filter-level').value;
+            const username = document.getElementById('filter-username').value;
+            const search = document.getElementById('filter-search').value;
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+
+            if (category) filters.category = category;
+            if (level) filters.level = level;
+            if (username) filters.username = username;
+            if (search) filters.search = search;
+            if (startDate) filters.start_date = new Date(startDate).toISOString();
+            if (endDate) filters.end_date = new Date(endDate).toISOString();
+
+            currentPage = 0;
+            updateFilterCount();
+            loadLogs();
+            switchTab('viewer');
+        }
+
+        function clearFilters() {
+            filters = {};
+            currentPage = 0;
+
+            document.getElementById('filter-category').value = '';
+            document.getElementById('filter-level').value = '';
+            document.getElementById('filter-username').value = '';
+            document.getElementById('filter-search').value = '';
+            document.getElementById('filter-start-date').value = '';
+            document.getElementById('filter-end-date').value = '';
+
+            updateFilterCount();
+            loadLogs();
+        }
+
+        function updateFilterCount() {
+            document.getElementById('stat-filters').textContent = Object.keys(filters).length;
+        }
+
+        async function exportLogs() {
+            try {
+                const btn = document.getElementById('btn-export');
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner"></div> Exporting...';
+
+                const res = await fetch('/settings/api/logs/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters)
+                });
+
+                if (res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `vaas_logs_${new Date().toISOString()}.csv`;
+                    a.click();
+                    showSuccess('Logs exported successfully');
+                } else {
+                    const data = await res.json();
+                    showError('Export failed: ' + data.error);
+                }
+            } catch (err) {
+                showError('Export failed: ' + err.message);
+            } finally {
+                const btn = document.getElementById('btn-export');
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Export CSV';
+            }
+        }
+
+        async function cleanupLogs() {
+            const days = parseInt(document.getElementById('cleanup-days').value);
+
+            if (!confirm(`Are you sure you want to delete logs older than ${days} days? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const btn = document.getElementById('btn-cleanup');
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner"></div> Cleaning...';
+
+                const res = await fetch('/settings/api/logs/cleanup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    showSuccess(data.message);
+                    loadLogs();
+                    loadStatistics();
+                } else {
+                    showError('Cleanup failed: ' + data.error);
+                }
+            } catch (err) {
+                showError('Cleanup failed: ' + err.message);
+            } finally {
+                const btn = document.getElementById('btn-cleanup');
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Clean Up Logs';
+            }
+        }
+
+        function showLogDetails(log) {
+            const details = log.details ? JSON.parse(log.details) : {};
+            const detailsStr = Object.keys(details).length > 0 ? JSON.stringify(details, null, 2) : 'No additional details';
+
+            alert(`Log Details:\n\nTime: ${new Date(log.timestamp).toLocaleString()}\nCategory: ${log.category}\nLevel: ${log.level}\nMessage: ${log.message}\nUser: ${log.username || 'N/A'}\nIP: ${log.ip_address || 'N/A'}\nEndpoint: ${log.endpoint || 'N/A'}\nMethod: ${log.method || 'N/A'}\n\nDetails:\n${detailsStr}`);
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('status-message');
+            el.innerHTML = `<span class="text-green-600">${message}</span>`;
+            setTimeout(() => el.innerHTML = '', 5000);
+        }
+
+        function showError(message) {
+            const el = document.getElementById('status-message');
+            el.innerHTML = `<span class="text-red-600">${message}</span>`;
+            setTimeout(() => el.innerHTML = '', 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

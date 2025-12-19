@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Base Settings - VAAS</title>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-4xl mx-auto py-8 px-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to App
+                </a>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">Knowledge Base Settings</h1>
+            <div></div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-3 mb-4">Knowledge Base Statistics</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-blue-600 font-medium">Hostname Rules</p>
+                            <p class="text-3xl font-bold text-blue-800 mt-1" id="hostname-count">{{ stats.hostname_count }}</p>
+                        </div>
+                        <svg class="w-12 h-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                        </svg>
+                    </div>
+                    <p class="text-xs text-blue-600 mt-2">Maps hostnames to teams</p>
+                </div>
+
+                <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-green-600 font-medium">Title Rules</p>
+                            <p class="text-3xl font-bold text-green-800 mt-1" id="title-count">{{ stats.title_count }}</p>
+                        </div>
+                        <svg class="w-12 h-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-xs text-green-600 mt-2">Classifies by vulnerability title</p>
+                </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-600">
+                    <strong>Total Rules:</strong> <span id="total-count" class="font-bold text-gray-800">{{ stats.hostname_count + stats.title_count }}</span>
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    These rules are used by the classification engine to automatically assign vulnerabilities to IT teams.
+                </p>
+            </div>
+        </div>
+
+        <!-- Export/Import Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-3 mb-6">Backup & Restore</h2>
+
+            <!-- Download Section -->
+            <div class="mb-8">
+                <h3 class="font-medium text-gray-800 mb-3">Export Knowledge Base</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Download the entire Knowledge Base as an Excel file. This includes all hostname mappings and title classification rules.
+                </p>
+                <button id="btn-download"
+                    class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download Knowledge Base
+                </button>
+            </div>
+
+            <hr class="my-6 border-gray-200">
+
+            <!-- Upload/Import Section -->
+            <div>
+                <h3 class="font-medium text-gray-800 mb-3">Import/Restore Knowledge Base</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Upload an Excel file to restore or merge Knowledge Base rules.
+                </p>
+
+                <!-- Import Mode Selection -->
+                <div class="mb-4 p-4 border rounded-lg bg-gray-50">
+                    <h4 class="font-medium text-gray-800 mb-3">Import Mode</h4>
+                    <div class="space-y-3">
+                        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg hover:bg-white transition-colors">
+                            <input type="radio" name="import-mode" value="merge" checked
+                                class="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="font-medium text-gray-800">Merge</span>
+                                <p class="text-sm text-gray-600 mt-0.5">
+                                    Add new rules and update existing ones. Keeps rules not in the file.
+                                    <span class="text-blue-600">(Safe - won't delete anything)</span>
+                                </p>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg hover:bg-white transition-colors">
+                            <input type="radio" name="import-mode" value="replace"
+                                class="mt-1 w-4 h-4 text-red-600 focus:ring-red-500">
+                            <div>
+                                <span class="font-medium text-gray-800">Replace (Full Restore)</span>
+                                <p class="text-sm text-gray-600 mt-0.5">
+                                    Delete ALL existing rules first, then import from file.
+                                    <span class="text-red-600">(Use to restore from backup)</span>
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-200 mb-4">
+                    <h4 class="font-medium text-yellow-800 mb-2">File Format</h4>
+                    <ul class="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                        <li>Excel file must have "Hostnames" and "Rules" (or "Titles") sheets</li>
+                        <li>Use the "Download Knowledge Base" button above to get the correct format</li>
+                        <li>Classification engine will automatically reload after import</li>
+                    </ul>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <label for="file-upload" class="cursor-pointer">
+                        <input type="file" id="file-upload" accept=".xlsx" class="hidden">
+                        <span class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                            <svg class="w-5 h-5 inline-block mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Import Knowledge Base
+                        </span>
+                    </label>
+                    <span id="file-name" class="text-sm text-gray-500 italic">No file selected</span>
+                </div>
+
+                <div id="import-status" class="mt-4"></div>
+            </div>
+        </div>
+
+        <!-- Help Text -->
+        <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 class="font-medium text-blue-800 mb-2">Excel File Format</h3>
+            <div class="text-sm text-blue-700 space-y-2">
+                <p><strong>Sheet 1 - Hostnames:</strong></p>
+                <ul class="list-disc list-inside ml-4">
+                    <li>Column: "Hostname" - Server hostname or IP</li>
+                    <li>Column: "Team" or "Owner" - Team responsible</li>
+                </ul>
+                <p class="mt-3"><strong>Sheet 2 - Titles:</strong></p>
+                <ul class="list-disc list-inside ml-4">
+                    <li>Column: "Title" - Vulnerability title pattern</li>
+                    <li>Column: "Team" - Team responsible</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Database Maintenance Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mt-6">
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-3 mb-6">Database Maintenance</h2>
+
+            <!-- Report Database Statistics -->
+            <div class="mb-6">
+                <h3 class="font-medium text-gray-800 mb-3">Classification Reports Statistics</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Every file upload stores classification results in the database. Use these tools to manage database growth.
+                </p>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div class="p-3 bg-gray-50 rounded-lg text-center">
+                        <p class="text-xs text-gray-500">Total Reports</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-reports">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg text-center">
+                        <p class="text-xs text-gray-500">Total Items</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-items">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg text-center">
+                        <p class="text-xs text-gray-500">Database Size</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-size">-</p>
+                    </div>
+                    <div class="p-3 bg-gray-50 rounded-lg text-center">
+                        <p class="text-xs text-gray-500">Avg Items/Report</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-avg">-</p>
+                    </div>
+                </div>
+
+                <!-- Duplicates Warning -->
+                <div id="duplicates-warning" class="hidden p-4 bg-yellow-50 rounded-lg border border-yellow-200 mb-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-yellow-800">
+                                <span id="duplicate-count">0</span> potential duplicate uploads detected
+                            </p>
+                            <p class="text-xs text-yellow-700 mt-1">Same filename uploaded multiple times. Consider removing duplicates to save space.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-refresh-stats" class="text-sm text-blue-600 hover:text-blue-700 underline">
+                    Refresh Statistics
+                </button>
+            </div>
+
+            <hr class="my-6 border-gray-200">
+
+            <!-- Cleanup Actions -->
+            <div class="space-y-4">
+                <h3 class="font-medium text-gray-800 mb-3">Cleanup Actions</h3>
+
+                <!-- Delete Old Reports -->
+                <div class="p-4 border rounded-lg">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Delete Old Reports</h4>
+                            <p class="text-sm text-gray-600 mt-1">
+                                Remove classification reports older than the specified period.
+                            </p>
+                            <div class="mt-2 flex items-center gap-2">
+                                <label class="text-sm text-gray-600">Keep reports from last:</label>
+                                <select id="retention-days" class="border rounded px-3 py-1 text-sm">
+                                    <option value="30">30 days</option>
+                                    <option value="60">60 days</option>
+                                    <option value="90" selected>90 days</option>
+                                    <option value="180">6 months</option>
+                                    <option value="365">1 year</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="btn-delete-old"
+                            class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm whitespace-nowrap">
+                            Delete Old Reports
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Delete Duplicates -->
+                <div class="p-4 border rounded-lg">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Remove Duplicate Reports</h4>
+                            <p class="text-sm text-gray-600 mt-1">
+                                Find and remove duplicate uploads (same filename and row count). Keeps the newest version.
+                            </p>
+                        </div>
+                        <button id="btn-delete-duplicates"
+                            class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm whitespace-nowrap">
+                            Remove Duplicates
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Optimize Database -->
+                <div class="p-4 border rounded-lg">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Optimize Database</h4>
+                            <p class="text-sm text-gray-600 mt-1">
+                                Reclaim unused space and rebuild indexes. Run after deleting large amounts of data.
+                            </p>
+                        </div>
+                        <button id="btn-optimize"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">
+                            Optimize Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Full Cleanup -->
+                <div class="p-4 border-2 border-purple-300 rounded-lg bg-purple-50">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-purple-900">Full Database Cleanup</h4>
+                            <p class="text-sm text-purple-700 mt-1">
+                                Delete old reports + Remove duplicates + Optimize database in one action.
+                                <strong>Recommended for periodic maintenance.</strong>
+                            </p>
+                        </div>
+                        <button id="btn-full-cleanup"
+                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm whitespace-nowrap">
+                            Run Full Cleanup
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Display -->
+            <div id="cleanup-results" class="hidden mt-6"></div>
+        </div>
+
+        <!-- Auto-Cleanup Scheduler Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mt-6">
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-3 mb-6">Automatic Cleanup Scheduler</h2>
+
+            <p class="text-sm text-gray-600 mb-6">
+                Configure automatic cleanup to run periodically. When enabled, the scheduler will automatically delete old reports
+                based on the retention period you set.
+            </p>
+
+            <!-- Scheduler Status -->
+            <div class="p-4 bg-gray-50 rounded-lg mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-medium text-gray-800">Scheduler Status</h3>
+                        <p class="text-sm mt-1">
+                            <span id="scheduler-status" class="font-medium text-gray-500">Loading...</span>
+                        </p>
+                    </div>
+                    <div id="scheduler-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                        Unknown
+                    </div>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Last Cleanup:</span>
+                        <span id="last-cleanup" class="text-gray-800 ml-1">Never</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Next Cleanup:</span>
+                        <span id="next-cleanup" class="text-gray-800 ml-1">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scheduler Settings -->
+            <div class="space-y-4">
+                <!-- Enable Toggle -->
+                <div class="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                        <h4 class="font-medium text-gray-800">Enable Auto-Cleanup</h4>
+                        <p class="text-sm text-gray-600 mt-1">Automatically run cleanup on a schedule</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="scheduler-enabled" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Interval Setting -->
+                <div class="p-4 border rounded-lg">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Cleanup Interval</h4>
+                            <p class="text-sm text-gray-600 mt-1">How often to run the automatic cleanup</p>
+                        </div>
+                        <select id="scheduler-interval" class="border rounded-lg px-4 py-2 text-sm bg-white">
+                            <option value="1">Every day</option>
+                            <option value="3">Every 3 days</option>
+                            <option value="7" selected>Every week</option>
+                            <option value="14">Every 2 weeks</option>
+                            <option value="30">Every month</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Retention Setting -->
+                <div class="p-4 border rounded-lg">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">Retention Period</h4>
+                            <p class="text-sm text-gray-600 mt-1">Delete reports older than this period</p>
+                        </div>
+                        <select id="scheduler-retention" class="border rounded-lg px-4 py-2 text-sm bg-white">
+                            <option value="7">7 days</option>
+                            <option value="14">14 days</option>
+                            <option value="30" selected>30 days</option>
+                            <option value="60">60 days</option>
+                            <option value="90">90 days</option>
+                            <option value="180">6 months</option>
+                            <option value="365">1 year</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-3 pt-4">
+                    <button id="btn-save-scheduler"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                        Save Scheduler Settings
+                    </button>
+                    <button id="btn-run-scheduler-now"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                        Run Cleanup Now
+                    </button>
+                </div>
+
+                <!-- Scheduler Results -->
+                <div id="scheduler-results" class="hidden mt-4"></div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 class="font-medium text-blue-800 mb-2">How Auto-Cleanup Works</h4>
+                <ul class="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                    <li>The scheduler checks hourly if cleanup is needed</li>
+                    <li>When due, it deletes reports older than the retention period</li>
+                    <li>After cleanup, the database is optimized to reclaim space</li>
+                    <li>Knowledge Base rules are never affected - only upload history</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Download Knowledge Base
+        document.getElementById('btn-download').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-download');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="animate-spin w-5 h-5 mr-2 inline-block" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Downloading...';
+
+            try {
+                const response = await fetch('/kb/export');
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'knowledge_base.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showStatus('Knowledge Base downloaded successfully', false);
+                } else {
+                    const error = await response.json();
+                    showStatus('Download failed: ' + (error.error || 'Unknown error'), true);
+                }
+            } catch (err) {
+                showStatus('Download failed: ' + err.message, true);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
+
+        // File selection display
+        document.getElementById('file-upload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const fileNameEl = document.getElementById('file-name');
+            const statusEl = document.getElementById('import-status');
+
+            if (!file) {
+                fileNameEl.textContent = 'No file selected';
+                return;
+            }
+
+            fileNameEl.textContent = file.name;
+
+            // Get selected import mode
+            const mode = document.querySelector('input[name="import-mode"]:checked').value;
+            const modeLabel = mode === 'replace' ? 'REPLACE (Full Restore)' : 'Merge';
+
+            // Different confirmation based on mode
+            let confirmMsg = `Import Knowledge Base from "${file.name}"?\n\nMode: ${modeLabel}\n\n`;
+            if (mode === 'replace') {
+                confirmMsg += '⚠️ WARNING: This will DELETE ALL existing rules and replace them with the file contents!\n\nThis cannot be undone. Are you sure?';
+            } else {
+                confirmMsg += 'This will add new rules and update existing ones. Existing rules not in the file will be kept.\n\nProceed?';
+            }
+
+            if (!confirm(confirmMsg)) {
+                e.target.value = '';
+                fileNameEl.textContent = 'No file selected';
+                return;
+            }
+
+            // Upload file with mode
+            statusEl.innerHTML = '<p class="text-blue-600">Importing... Please wait.</p>';
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('mode', mode);
+
+            try {
+                const response = await fetch('/kb/import', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    statusEl.innerHTML = `<p class="text-green-600 font-medium">✓ ${result.message}</p>`;
+                    // Refresh statistics
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    statusEl.innerHTML = `<p class="text-red-600">✗ Import failed: ${result.error}</p>`;
+                }
+            } catch (err) {
+                statusEl.innerHTML = `<p class="text-red-600">✗ Import failed: ${err.message}</p>`;
+            }
+
+            // Reset file input
+            e.target.value = '';
+            fileNameEl.textContent = 'No file selected';
+        });
+
+        function showStatus(message, isError = false) {
+            const statusEl = document.getElementById('import-status');
+            statusEl.innerHTML = `<p class="${isError ? 'text-red-600' : 'text-green-600'} font-medium">${isError ? '✗' : '✓'} ${message}</p>`;
+            setTimeout(() => statusEl.innerHTML = '', 5000);
+        }
+
+        // ============== Database Maintenance Functions ==============
+
+        // Load database statistics
+        async function loadDbStats() {
+            try {
+                const response = await fetch('/api/db/stats');
+                const data = await response.json();
+
+                if (data.success && data.stats) {
+                    const stats = data.stats;
+
+                    document.getElementById('stat-reports').textContent = stats.total_reports || 0;
+                    document.getElementById('stat-items').textContent = stats.total_report_items || 0;
+                    document.getElementById('stat-size').textContent = stats.database_size_mb
+                        ? `${stats.database_size_mb} MB`
+                        : 'N/A';
+                    document.getElementById('stat-avg').textContent = stats.avg_items_per_report || 0;
+
+                    // Show duplicates warning if needed
+                    if (stats.duplicate_count > 0) {
+                        document.getElementById('duplicate-count').textContent = stats.duplicate_count;
+                        document.getElementById('duplicates-warning').classList.remove('hidden');
+                    } else {
+                        document.getElementById('duplicates-warning').classList.add('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load DB stats:', err);
+            }
+        }
+
+        // Refresh stats button
+        document.getElementById('btn-refresh-stats').addEventListener('click', () => {
+            loadDbStats();
+        });
+
+        // Delete old reports
+        document.getElementById('btn-delete-old').addEventListener('click', async () => {
+            const retentionDays = document.getElementById('retention-days').value;
+
+            if (!confirm(`Delete all classification reports older than ${retentionDays} days?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            await runCleanup({
+                delete_old: true,
+                retention_days: parseInt(retentionDays),
+                delete_duplicates: false,
+                vacuum: false
+            });
+        });
+
+        // Delete duplicates
+        document.getElementById('btn-delete-duplicates').addEventListener('click', async () => {
+            if (!confirm('Remove duplicate reports?\n\nThis will delete older copies of files that were uploaded multiple times, keeping only the newest version.\n\nThis action cannot be undone.')) {
+                return;
+            }
+
+            await runCleanup({
+                delete_old: false,
+                delete_duplicates: true,
+                vacuum: false
+            });
+        });
+
+        // Optimize database
+        document.getElementById('btn-optimize').addEventListener('click', async () => {
+            if (!confirm('Optimize database?\n\nThis will reclaim unused space and may take a few moments.')) {
+                return;
+            }
+
+            await runCleanup({
+                delete_old: false,
+                delete_duplicates: false,
+                vacuum: true
+            });
+        });
+
+        // Full cleanup
+        document.getElementById('btn-full-cleanup').addEventListener('click', async () => {
+            const retentionDays = document.getElementById('retention-days').value;
+
+            if (!confirm(`Run full database cleanup?\n\nThis will:\n• Delete reports older than ${retentionDays} days\n• Remove duplicate uploads\n• Optimize database\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            await runCleanup({
+                delete_old: true,
+                retention_days: parseInt(retentionDays),
+                delete_duplicates: true,
+                vacuum: true
+            });
+        });
+
+        // Run cleanup API call
+        async function runCleanup(options) {
+            const resultsEl = document.getElementById('cleanup-results');
+            resultsEl.classList.remove('hidden');
+            resultsEl.innerHTML = '<p class="text-blue-600">Running cleanup... Please wait.</p>';
+
+            try {
+                const response = await fetch('/api/db/cleanup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(options)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    let html = '<div class="p-4 bg-green-50 border border-green-200 rounded-lg">';
+                    html += '<h4 class="font-medium text-green-800 mb-2">Cleanup Completed Successfully</h4>';
+                    html += '<ul class="space-y-1 text-sm text-green-700">';
+
+                    result.actions.forEach(action => {
+                        const icon = action.success ? '✓' : '✗';
+                        html += `<li>${icon} ${action.message}</li>`;
+                    });
+
+                    html += '</ul></div>';
+                    resultsEl.innerHTML = html;
+
+                    // Refresh statistics
+                    loadDbStats();
+                } else {
+                    resultsEl.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-red-700">Cleanup failed: ${result.error || 'Unknown error'}</p>
+                    </div>`;
+                }
+            } catch (err) {
+                resultsEl.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p class="text-red-700">Error: ${err.message}</p>
+                </div>`;
+            }
+        }
+
+        // Load stats on page load
+        document.addEventListener('DOMContentLoaded', loadDbStats);
+
+        // ============== Scheduler Functions ==============
+
+        // Load scheduler status
+        async function loadSchedulerStatus() {
+            try {
+                const response = await fetch('/api/scheduler/status');
+                const data = await response.json();
+
+                if (data.success && data.status) {
+                    const status = data.status;
+
+                    // Update toggle
+                    document.getElementById('scheduler-enabled').checked = status.enabled;
+
+                    // Update dropdowns
+                    document.getElementById('scheduler-interval').value = status.interval_days || 7;
+                    document.getElementById('scheduler-retention').value = status.retention_days || 30;
+
+                    // Update status badge
+                    const badge = document.getElementById('scheduler-badge');
+                    const statusText = document.getElementById('scheduler-status');
+
+                    if (status.enabled && status.running) {
+                        badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
+                        badge.textContent = 'Running';
+                        statusText.textContent = 'Scheduler is active and monitoring';
+                        statusText.className = 'font-medium text-green-600';
+                    } else if (status.enabled && !status.running) {
+                        badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+                        badge.textContent = 'Enabled (Starting)';
+                        statusText.textContent = 'Scheduler is enabled but not yet started';
+                        statusText.className = 'font-medium text-yellow-600';
+                    } else {
+                        badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700';
+                        badge.textContent = 'Disabled';
+                        statusText.textContent = 'Automatic cleanup is disabled';
+                        statusText.className = 'font-medium text-gray-500';
+                    }
+
+                    // Update last/next cleanup times
+                    const lastCleanup = document.getElementById('last-cleanup');
+                    const nextCleanup = document.getElementById('next-cleanup');
+
+                    if (status.last_cleanup) {
+                        const lastDate = new Date(status.last_cleanup);
+                        lastCleanup.textContent = lastDate.toLocaleString();
+                    } else {
+                        lastCleanup.textContent = 'Never';
+                    }
+
+                    if (status.next_cleanup && status.enabled) {
+                        const nextDate = new Date(status.next_cleanup);
+                        nextCleanup.textContent = nextDate.toLocaleString();
+                    } else {
+                        nextCleanup.textContent = '-';
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load scheduler status:', err);
+            }
+        }
+
+        // Save scheduler settings
+        document.getElementById('btn-save-scheduler').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-save-scheduler');
+            const resultsEl = document.getElementById('scheduler-results');
+            const originalText = btn.textContent;
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            const settings = {
+                enabled: document.getElementById('scheduler-enabled').checked,
+                interval_days: parseInt(document.getElementById('scheduler-interval').value),
+                retention_days: parseInt(document.getElementById('scheduler-retention').value)
+            };
+
+            try {
+                const response = await fetch('/api/scheduler/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                const result = await response.json();
+
+                resultsEl.classList.remove('hidden');
+                if (result.success) {
+                    resultsEl.innerHTML = `<div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p class="text-green-700 font-medium">✓ ${result.message}</p>
+                    </div>`;
+                    // Refresh status
+                    setTimeout(loadSchedulerStatus, 1000);
+                } else {
+                    resultsEl.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-red-700">✗ ${result.message}</p>
+                    </div>`;
+                }
+            } catch (err) {
+                resultsEl.classList.remove('hidden');
+                resultsEl.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p class="text-red-700">Error: ${err.message}</p>
+                </div>`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = originalText;
+
+            // Hide results after 5 seconds
+            setTimeout(() => resultsEl.classList.add('hidden'), 5000);
+        });
+
+        // Run cleanup now
+        document.getElementById('btn-run-scheduler-now').addEventListener('click', async () => {
+            if (!confirm('Run cleanup now?\n\nThis will delete reports older than the configured retention period and optimize the database.')) {
+                return;
+            }
+
+            const btn = document.getElementById('btn-run-scheduler-now');
+            const resultsEl = document.getElementById('scheduler-results');
+            const originalText = btn.textContent;
+
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+
+            try {
+                const response = await fetch('/api/scheduler/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                resultsEl.classList.remove('hidden');
+                if (result.success) {
+                    let html = `<div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p class="text-green-700 font-medium mb-2">✓ Cleanup completed successfully</p>
+                        <ul class="text-sm text-green-600 space-y-1">
+                            <li>• Deleted ${result.deleted_reports || 0} old reports</li>
+                            <li>• Database optimization: ${result.vacuum_success ? 'Success' : 'Skipped'}</li>
+                        </ul>
+                    </div>`;
+                    resultsEl.innerHTML = html;
+
+                    // Refresh stats and status
+                    loadDbStats();
+                    loadSchedulerStatus();
+                } else {
+                    resultsEl.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-red-700">✗ ${result.message}</p>
+                    </div>`;
+                }
+            } catch (err) {
+                resultsEl.classList.remove('hidden');
+                resultsEl.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p class="text-red-700">Error: ${err.message}</p>
+                </div>`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = originalText;
+        });
+
+        // Load scheduler status on page load
+        document.addEventListener('DOMContentLoaded', loadSchedulerStatus);
+    </script>
+</body>
+
+</html>

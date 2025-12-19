@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - VAAS</title>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <style>
+        .login-bg {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body class="login-bg min-h-screen flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <!-- Logo & Title -->
+        <div class="text-center mb-8">
+            <img src="{{ url_for('static', filename='img/Logo.png') }}" alt="VAAS Logo" class="h-16 mx-auto mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">VAAS</h1>
+            <p class="text-gray-500 text-sm">Vulnerability Auto Assignment Solution</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="mb-4 p-3 rounded-lg text-sm 
+                        {% if category == 'error' %}bg-red-100 text-red-700 border border-red-200
+                        {% elif category == 'success' %}bg-green-100 text-green-700 border border-green-200
+                        {% else %}bg-blue-100 text-blue-700 border border-blue-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Login Form -->
+        <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username"
+                    placeholder="Enter your AD username"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password"
+                    placeholder="Enter your password"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+            </div>
+
+            <button type="submit"
+                class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 transition-all shadow-lg">
+                Sign In
+            </button>
+        </form>
+
+        <p class="text-center text-gray-400 text-xs mt-8">
+            Authenticate with your Active Directory credentials
+        </p>
+    </div>
+</body>
+
+</html>

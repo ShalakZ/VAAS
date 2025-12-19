@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - VAAS</title>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-6xl mx-auto py-8 px-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to App
+                </a>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">User Management</h1>
+            <div class="flex gap-2">
+                <button id="btn-import-ad"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9">
+                        </path>
+                    </svg>
+                    Import from AD
+                </button>
+                <button id="btn-add-user"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Local User
+                </button>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Username</th>
+                        <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Display Name</th>
+                        <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Role</th>
+                        <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Type</th>
+                        <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Status</th>
+                        <th class="text-left px-6 py-4 text-sm font-semibold text-gray-600">Last Login</th>
+                        <th class="text-right px-6 py-4 text-sm font-semibold text-gray-600">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body">
+                    {% for user in users %}
+                    <tr class="border-b hover:bg-gray-50 transition-colors" data-user-id="{{ user.id }}">
+                        <td class="px-6 py-4">
+                            <span class="font-medium text-gray-800">{{ user.username }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-gray-600">{{ user.display_name }}</td>
+                        <td class="px-6 py-4">
+                            <span class="role-badge px-2 py-1 rounded text-xs font-medium
+                                {% if user.role == 'administrator' %}bg-purple-100 text-purple-700
+                                {% elif user.role == 'security_admin' %}bg-blue-100 text-blue-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {% if user.role == 'administrator' %}Administrator
+                                {% elif user.role == 'security_admin' %}Security Admin
+                                {% else %}Viewer{% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if user.auth_type == 'ldap' %}bg-green-100 text-green-700
+                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {% if user.auth_type == 'ldap' %}LDAP{% else %}Local{% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if user.is_active %}
+                            <span class="text-green-600 flex items-center gap-1">
+                                <span class="w-2 h-2 bg-green-500 rounded-full"></span> Active
+                            </span>
+                            {% else %}
+                            <span class="text-red-600 flex items-center gap-1">
+                                <span class="w-2 h-2 bg-red-500 rounded-full"></span> Disabled
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-gray-500 text-sm">
+                            {{ user.last_login or 'Never' }}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <button
+                                    onclick="editUser({{ user.id }}, '{{ user.username }}', '{{ user.display_name }}', '{{ user.email or '' }}', '{{ user.role }}', {{ 'true' if user.is_active else 'false' }}, '{{ user.auth_type }}')"
+                                    class="text-blue-600 hover:text-blue-800 p-1" title="Edit">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                        </path>
+                                    </svg>
+                                </button>
+                                {% if user.auth_type == 'local' %}
+                                <button onclick="changePassword({{ user.id }}, '{{ user.username }}')"
+                                    class="text-yellow-600 hover:text-yellow-800 p-1" title="Change Password">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                                        </path>
+                                    </svg>
+                                </button>
+                                {% endif %}
+                                <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')"
+                                    class="text-red-600 hover:text-red-800 p-1" title="Delete">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                        </path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if not users %}
+            <div class="text-center py-12 text-gray-500">
+                No users found. Click "Add User" to create one.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Role Legend -->
+        <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 class="font-medium text-blue-800 mb-2">📋 Role Permissions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                    <span class="font-semibold text-gray-700">Viewer:</span>
+                    <p class="text-gray-600">Upload files, view results, export reports</p>
+                </div>
+                <div>
+                    <span class="font-semibold text-gray-700">Security Admin:</span>
+                    <p class="text-gray-600">All Viewer permissions + modify assignments, manage KB rules</p>
+                </div>
+                <div>
+                    <span class="font-semibold text-gray-700">Administrator:</span>
+                    <p class="text-gray-600">Full access including user management and settings</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit User Modal -->
+    <div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <h2 id="modal-title" class="text-xl font-bold text-gray-800 mb-6">Add New User</h2>
+
+            <form id="user-form" class="space-y-4">
+                <input type="hidden" id="form-user-id" value="">
+                <input type="hidden" id="form-auth-type" value="local">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" id="form-username" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div id="password-field">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password <span
+                            class="text-red-500">*</span></label>
+                    <input type="password" id="form-password"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                    <input type="text" id="form-display-name"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="form-email"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Role <span
+                            class="text-red-500">*</span></label>
+                    <select id="form-role"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="viewer">Viewer</option>
+                        <option value="security_admin">Security Admin</option>
+                        <option value="administrator">Administrator</option>
+                    </select>
+                </div>
+
+                <div id="active-field" class="hidden">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" id="form-active" checked class="w-4 h-4 text-blue-600 rounded">
+                        <span class="text-sm text-gray-700">Active</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal()"
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">Change Password</h2>
+            <p id="password-username" class="text-gray-600 mb-4"></p>
+
+            <form id="password-form" class="space-y-4">
+                <input type="hidden" id="password-user-id" value="">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">New Password <span
+                            class="text-red-500">*</span></label>
+                    <input type="password" id="new-password" required minlength="4"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password <span
+                            class="text-red-500">*</span></label>
+                    <input type="password" id="confirm-password" required minlength="4"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closePasswordModal()"
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                        Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import from AD Modal -->
+    <div id="ad-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Import User from Active Directory</h2>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search AD Users</label>
+                <div class="flex gap-2">
+                    <input type="text" id="ad-search" placeholder="Enter username or name (min 2 chars)"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <button id="btn-ad-search" type="button"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <div id="ad-results" class="max-h-64 overflow-y-auto mb-4 border rounded-lg">
+                <div class="text-center py-8 text-gray-500">
+                    Enter a username or name to search Active Directory
+                </div>
+            </div>
+
+            <div id="ad-import-section" class="hidden border-t pt-4 mt-4">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="flex-1">
+                        <span class="font-medium text-gray-800" id="import-username"></span>
+                        <span class="text-sm text-gray-500 ml-2" id="import-display-name"></span>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-600 mr-2">Role:</label>
+                        <select id="import-role" class="px-3 py-1 border rounded-lg">
+                            <option value="viewer">Viewer</option>
+                            <option value="security_admin">Security Admin</option>
+                            <option value="administrator">Administrator</option>
+                        </select>
+                    </div>
+                    <button id="btn-import-user" type="button"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        Import
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4 border-t">
+                <button type="button" onclick="closeAdModal()"
+                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functions
+        function openModal() {
+            document.getElementById('user-modal').classList.remove('hidden');
+            document.getElementById('user-modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('user-modal').classList.add('hidden');
+            document.getElementById('user-modal').classList.remove('flex');
+            document.getElementById('user-form').reset();
+            document.getElementById('form-user-id').value = '';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+            document.getElementById('password-modal').classList.remove('flex');
+            document.getElementById('password-form').reset();
+        }
+
+        // Add user button
+        document.getElementById('btn-add-user').addEventListener('click', () => {
+            document.getElementById('modal-title').textContent = 'Add New User';
+            document.getElementById('form-user-id').value = '';
+            document.getElementById('form-username').disabled = false;
+            document.getElementById('password-field').classList.remove('hidden');
+            document.getElementById('active-field').classList.add('hidden');
+            openModal();
+        });
+
+        // Edit user
+        function editUser(id, username, displayName, email, role, isActive, authType) {
+            document.getElementById('modal-title').textContent = 'Edit User';
+            document.getElementById('form-user-id').value = id;
+            document.getElementById('form-username').value = username;
+            document.getElementById('form-username').disabled = true;
+            document.getElementById('form-display-name').value = displayName;
+            document.getElementById('form-email').value = email;
+            document.getElementById('form-role').value = role;
+            document.getElementById('form-active').checked = isActive;
+            document.getElementById('form-auth-type').value = authType;
+            document.getElementById('password-field').classList.add('hidden');
+            document.getElementById('active-field').classList.remove('hidden');
+            openModal();
+        }
+
+        // Save user
+        document.getElementById('user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userId = document.getElementById('form-user-id').value;
+            const isEdit = !!userId;
+
+            const data = {
+                username: document.getElementById('form-username').value,
+                display_name: document.getElementById('form-display-name').value,
+                email: document.getElementById('form-email').value,
+                role: document.getElementById('form-role').value
+            };
+
+            if (!isEdit) {
+                data.password = document.getElementById('form-password').value;
+                if (!data.password) {
+                    alert('Password is required');
+                    return;
+                }
+            } else {
+                data.is_active = document.getElementById('form-active').checked;
+            }
+
+            const url = isEdit ? `/api/users/${userId}` : '/api/users';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message || 'Failed to save user');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
+
+        // Change password
+        function changePassword(userId, username) {
+            document.getElementById('password-user-id').value = userId;
+            document.getElementById('password-username').textContent = `Changing password for: ${username}`;
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('password-modal').classList.add('flex');
+        }
+
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const newPass = document.getElementById('new-password').value;
+            const confirmPass = document.getElementById('confirm-password').value;
+
+            if (newPass !== confirmPass) {
+                alert('Passwords do not match');
+                return;
+            }
+
+            const userId = document.getElementById('password-user-id').value;
+
+            try {
+                const res = await fetch(`/api/users/${userId}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: newPass })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    alert('Password changed successfully');
+                    closePasswordModal();
+                } else {
+                    alert(result.message || 'Failed to change password');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
+
+        // Delete user
+        async function deleteUser(userId, username) {
+            if (!confirm(`Are you sure you want to delete user "${username}"?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message || 'Failed to delete user');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // ========== AD Import Functions ==========
+
+        let selectedAdUser = null;
+
+        // Open AD modal
+        document.getElementById('btn-import-ad').addEventListener('click', () => {
+            document.getElementById('ad-modal').classList.remove('hidden');
+            document.getElementById('ad-modal').classList.add('flex');
+            document.getElementById('ad-search').value = '';
+            document.getElementById('ad-results').innerHTML = '<div class="text-center py-8 text-gray-500">Enter a username or name to search Active Directory</div>';
+            document.getElementById('ad-import-section').classList.add('hidden');
+            selectedAdUser = null;
+        });
+
+        function closeAdModal() {
+            document.getElementById('ad-modal').classList.add('hidden');
+            document.getElementById('ad-modal').classList.remove('flex');
+        }
+
+        // Search AD users
+        document.getElementById('btn-ad-search').addEventListener('click', searchAdUsers);
+        document.getElementById('ad-search').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchAdUsers();
+        });
+
+        async function searchAdUsers() {
+            const query = document.getElementById('ad-search').value.trim();
+            if (query.length < 2) {
+                alert('Please enter at least 2 characters to search');
+                return;
+            }
+
+            const resultsDiv = document.getElementById('ad-results');
+            resultsDiv.innerHTML = '<div class="text-center py-8 text-gray-500">Searching...</div>';
+
+            try {
+                const res = await fetch(`/api/ldap/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+
+                if (!data.success) {
+                    resultsDiv.innerHTML = `<div class="text-center py-8 text-red-500">${data.message}</div>`;
+                    return;
+                }
+
+                if (data.users.length === 0) {
+                    resultsDiv.innerHTML = '<div class="text-center py-8 text-gray-500">No users found</div>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = data.users.map(user => `
+                    <div class="p-3 border-b hover:bg-gray-50 cursor-pointer flex items-center justify-between ${user.exists ? 'bg-green-50' : ''}"
+                         onclick="selectAdUser('${user.username}', '${user.display_name}', '${user.email || ''}')">
+                        <div>
+                            <span class="font-medium">${user.username}</span>
+                            <span class="text-sm text-gray-500 ml-2">${user.display_name}</span>
+                            ${user.email ? `<span class="text-xs text-gray-400 ml-2">${user.email}</span>` : ''}
+                        </div>
+                        ${user.exists ? '<span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Already imported</span>' : ''}
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                resultsDiv.innerHTML = `<div class="text-center py-8 text-red-500">Error: ${err.message}</div>`;
+            }
+        }
+
+        function selectAdUser(username, displayName, email) {
+            selectedAdUser = { username, display_name: displayName, email };
+            document.getElementById('import-username').textContent = username;
+            document.getElementById('import-display-name').textContent = `(${displayName})`;
+            document.getElementById('ad-import-section').classList.remove('hidden');
+        }
+
+        // Import user
+        document.getElementById('btn-import-user').addEventListener('click', async () => {
+            if (!selectedAdUser) {
+                alert('Please select a user first');
+                return;
+            }
+
+            const role = document.getElementById('import-role').value;
+
+            try {
+                const res = await fetch('/api/ldap/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: selectedAdUser.username,
+                        role: role
+                    })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    alert(result.message);
+                    location.reload();
+                } else {
+                    alert(result.message || 'Failed to import user');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
+    </script>
+</body>
+
+</html>

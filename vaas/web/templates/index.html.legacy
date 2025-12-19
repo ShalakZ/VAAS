@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAAS - Vulnerability Assignment</title>
+    <!-- Tailwind CSS with dark mode configuration -->
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/react.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/react-dom.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/babel.min.js') }}"></script>
+    <style>
+        /* Base Styles */
+        .drag-active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        th {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            background-color: #e5e7eb;
+        }
+
+        /* Sidebar Transitions */
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        /* Dark Mode - Essential Overrides */
+        .dark .drag-active {
+            background-color: #1e3a8a;
+            border-color: #60a5fa;
+        }
+
+        .dark th:hover {
+            background-color: #374151;
+        }
+
+        /* Dark Mode - Form Elements (not covered by Tailwind) */
+        .dark input,
+        .dark select,
+        .dark textarea {
+            background-color: #1f2937;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+
+        .dark input::placeholder {
+            color: #9ca3af;
+        }
+
+        .dark select {
+            color-scheme: dark;
+        }
+
+        /* Dark Mode - Table styling */
+        .dark thead,
+        .dark th {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+
+        .dark tbody tr:hover {
+            background-color: #374151;
+        }
+
+        /* Gear Animation */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .gear-spin {
+            animation: spin 3s linear infinite;
+        }
+
+        .gear-spin-reverse {
+            animation: spin 2s linear infinite reverse;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 font-sans transition-colors duration-300">
+    <div id="root"></div>
+
+    <style>
+        @keyframes fillProgress {
+            0% {
+                width: 0%;
+            }
+
+            100% {
+                width: 100%;
+            }
+        }
+    </style>
+    <script type="text/babel">
+        // Inject configuration from Python
+        const TEAMS_LIST = {{ teams_list | tojson }};
+
+        // User permissions for conditional UI rendering
+        const USER_PERMISSIONS = {
+            canModify: {{ user_info.can_modify | tojson if user_info else 'true' }},
+        canModifyKb: {{ user_info.can_modify_kb | tojson if user_info else 'true' }},
+        canExport: {{ user_info.can_export | tojson if user_info else 'true' }},
+        canManageUsers: {{ user_info.can_manage_users | tojson if user_info else 'true' }},
+        role: "{{ user_info.role if user_info else 'administrator' }}"
+        };
+
+        const { useState, useEffect, useMemo } = React;
+
+        function App() {
+            // Theme State
+            const [theme, setTheme] = useState(localStorage.getItem('vaas-theme') || 'light');
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+
+            useEffect(() => {
+                const root = window.document.documentElement;
+                if (theme === 'dark') {
+                    root.classList.add('dark');
+                    document.body.classList.remove('bg-gray-50', 'text-gray-800');
+                    document.body.classList.add('bg-gray-900', 'text-gray-100');
+                } else {
+                    root.classList.remove('dark');
+                    document.body.classList.remove('bg-gray-900', 'text-gray-100');
+                    document.body.classList.add('bg-gray-50', 'text-gray-800');
+                }
+                localStorage.setItem('vaas-theme', theme);
+            }, [theme]);
+
+            const toggleTheme = () => {
+                setTheme(prev => prev === 'light' ? 'dark' : 'light');
+            };
+
+            const [view, setView] = useState('upload'); // upload, review
+            const [currentFileName, setCurrentFileName] = useState('');
+            const [data, setData] = useState([]);
+            const [stats, setStats] = useState({ total: 0, auto: 0, review: 0 });
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            // Progress Simulation State
+            const [progress, setProgress] = useState(0);
+            const [progressText, setProgressText] = useState('');
+            const [exportingType, setExportingType] = useState(null);
+            const [exportProgress, setExportProgress] = useState(0);
+
+            // Progress Timer Effect
+            useEffect(() => {
+                let interval;
+                if (loading) {
+                    setProgress(0);
+                    setProgressText('Initiating Upload...');
+
+                    let step = 0;
+                    interval = setInterval(() => {
+                        step++;
+                        // Simulate progress stages based on typical 5-10s wait
+                        if (step === 1) { setProgress(20); setProgressText('Uploading File...'); }
+                        if (step === 5) { setProgress(45); setProgressText('Parsing Excel Data (Heavy I/O)...'); }
+                        if (step === 15) { setProgress(70); setProgressText('Analyzing Data...'); }
+                        if (step === 25) { setProgress(85); setProgressText('Applying Logic Rules...'); }
+                        if (step === 35) { setProgress(95); setProgressText('Finalizing...'); }
+                    }, 200);
+                } else {
+                    setProgress(100);
+                }
+                return () => clearInterval(interval);
+            }, [loading]);
+
+            // Export Progress Simulation (Asymptotic)
+            useEffect(() => {
+                let interval;
+                if (exportingType) {
+                    setExportProgress(0);
+                    let current = 0;
+                    interval = setInterval(() => {
+                        setExportProgress(prev => {
+                            if (prev >= 90) return prev; // Stall at 90%
+                            // Fast at start, slower as it fills
+                            const remaining = 90 - prev;
+                            const increment = Math.max(0.5, remaining * 0.1);
+                            return prev + increment;
+                        });
+                    }, 100);
+                } else {
+                    setExportProgress(100);
+                }
+                return () => clearInterval(interval);
+            }, [exportingType]);
+
+            // Sorting State
+            const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+
+            // Filter State
+            const [filter, setFilter] = useState('all'); // all, auto, review
+
+            // Debounce Hook to prevent lag on heavy filtering
+            function useDebounce(value, delay) {
+                const [debouncedValue, setDebouncedValue] = useState(value);
+                useEffect(() => {
+                    const handler = setTimeout(() => {
+                        setDebouncedValue(value);
+                    }, delay);
+                    return () => {
+                        clearTimeout(handler);
+                    };
+                }, [value, delay]);
+                return debouncedValue;
+            }
+
+            // Column Filter State (Immediate for UI)
+            const [columnFilters, setColumnFilters] = useState({
+                hostname: '',
+                Title: '',
+                Assigned_Team: '',
+                Reason: ''
+            });
+
+            // Debounced Filter State (For Logic)
+            const debouncedFilters = useDebounce(columnFilters, 300);
+
+            const handleFilterChange = (key, value) => {
+                setColumnFilters(prev => ({ ...prev, [key]: value }));
+            };
+
+            // Helper to render filter input
+            const renderFilterInput = (key, placeholder) => (
+                <input
+                    type="text"
+                    placeholder={`Filter ${placeholder}...`}
+                    className="w-full mt-1 px-2 py-1 text-xs border rounded focus:outline-none focus:border-blue-500 font-normal text-gray-700 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-600 dark:placeholder-gray-400"
+                    value={columnFilters[key] || ''}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => handleFilterChange(key, e.target.value)}
+                />
+            );
+
+            // Derived State: Sorted Data with Filtering
+            // CRITICAL: Depend on debouncedFilters, NOT columnFilters
+            const processedData = useMemo(() => {
+                let items = [...data];
+
+                // 1. High Level Filter (Review/Auto/Fuzzy)
+                if (filter === 'review') {
+                    items = items.filter(item => item.Needs_Review && item.Method !== 'Fuzzy');
+                } else if (filter === 'auto') {
+                    items = items.filter(item => !item.Needs_Review && item.Method !== 'Fuzzy');
+                } else if (filter === 'fuzzy') {
+                    items = items.filter(item => item.Method === 'Fuzzy');
+                }
+
+                // 2. Column Filters (Using Debounced Values)
+                Object.keys(debouncedFilters).forEach(key => {
+                    const filterValue = debouncedFilters[key].toLowerCase();
+                    if (filterValue) {
+                        items = items.filter(item => {
+                            const itemValue = String(item[key] || '').toLowerCase();
+                            return itemValue.includes(filterValue);
+                        });
+                    }
+                });
+
+                // 3. Sort
+                if (sortConfig.key !== null) {
+                    items.sort((a, b) => {
+                        let aVal = a[sortConfig.key];
+                        let bVal = b[sortConfig.key];
+
+                        if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                        if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+                        if (aVal < bVal) {
+                            return sortConfig.direction === 'ascending' ? -1 : 1;
+                        }
+                        if (aVal > bVal) {
+                            return sortConfig.direction === 'ascending' ? 1 : -1;
+                        }
+                        return 0;
+                    });
+                }
+                return items;
+            }, [data, sortConfig, filter, debouncedFilters]);
+
+            const requestSort = (key) => {
+                let direction = 'ascending';
+                if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+                    direction = 'descending';
+                }
+                setSortConfig({ key, direction });
+            };
+
+            const getSortIcon = (key) => {
+                if (sortConfig.key !== key) return <span className="text-gray-300 dark:text-gray-500 ml-1">⇅</span>;
+                if (sortConfig.direction === 'ascending') return <span className="text-gray-600 dark:text-gray-300 ml-1">↑</span>;
+                return <span className="text-gray-600 dark:text-gray-300 ml-1">↓</span>;
+            };
+
+            // Row Detail Modal State
+            const [selectedRow, setSelectedRow] = useState(null);
+
+            // Helper to detect and format dates
+            const formatValue = (key, value) => {
+                // Check if key looks like a date field
+                const dateKeyPatterns = /date|time|created|modified|published|timestamp|_at|detected|seen|found/i;
+                const isDateKey = dateKeyPatterns.test(key);
+
+                if (!isDateKey) return null;
+
+                if (typeof value === 'number') {
+                    // Excel serial date: days since 1900-01-01 (typically 25000-50000 range)
+                    if (value > 25000 && value < 60000) {
+                        const excelEpoch = new Date(1899, 11, 30); // Excel epoch
+                        const date = new Date(excelEpoch.getTime() + value * 86400000);
+                        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                    // Unix timestamp in seconds (after year 2000)
+                    if (value > 946684800 && value < 4102444800) {
+                        return new Date(value * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                    // Unix timestamp in milliseconds
+                    if (value > 946684800000) {
+                        return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                }
+
+                // Handle String Dates
+                if (typeof value === 'string') {
+                    const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                }
+
+                return null; // Not a date, use default rendering
+            };
+
+            const calculateStats = (items) => {
+                const total = items.length;
+                const fuzzy = items.filter(i => i.Method === 'Fuzzy').length;
+                const review = items.filter(i => i.Needs_Review && i.Method !== 'Fuzzy').length;
+                const auto = total - review - fuzzy;
+                setStats({ total, auto, review, fuzzy });
+            };
+
+            const handleFileUpload = async (file) => {
+                setCurrentFileName(file.name);
+                setLoading(true);
+                setError(null);
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const res = await fetch('/classify', { method: 'POST', body: formData });
+                    if (!res.ok) throw new Error(await res.text());
+                    const jsonData = await res.json();
+
+                    setData(jsonData);
+                    calculateStats(jsonData);
+                    setView('review');
+                    setFilter('all'); // Reset filter
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleTeamChangeSafe = (rowToUpdate, newTeam) => {
+                const newData = data.map(row => {
+                    if (row === rowToUpdate) {
+                        // If changing to Unclassified or Application, mark as needs review (yellow)
+                        const needsReview = (newTeam === 'Unclassified' || newTeam === 'Application');
+                        return {
+                            ...row,
+                            Assigned_Team: newTeam,
+                            Needs_Review: needsReview,
+                            Method: 'Manual Override'
+                        };
+                    }
+                    return row;
+                });
+                setData(newData);
+                calculateStats(newData);
+            };
+
+            const submitCorrections = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch('/submit_corrections', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data })
+                    });
+                    if (!res.ok) throw new Error('Failed to save corrections');
+                    alert("Corrections submitted and model queued for retraining.");
+                } catch (err) {
+                    alert(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const saveCorrectionsToKb = async () => {
+                // Filter for manually overridden rows
+                const manualOverrides = data.filter(row => row.Method === 'Manual Override');
+
+                if (manualOverrides.length === 0) {
+                    return alert("No manual corrections found to save.");
+                }
+
+                // Deduplicate Hostnames (Only for Application Teams)
+                const uniqueHostnames = {};
+                manualOverrides.forEach(row => {
+                    const team = row.Assigned_Team;
+                    // If assigned to Sys Admin or Out of Scope, we assume it's a Title-based rule
+                    // and we do NOT change the Hostname ownership.
+                    // If assigned to a specific team (e.g. EMS), we assume it's an Application rule
+                    // and we Update the hostname owner.
+                    if (team !== 'System Admin' && team !== 'Out of Linux Scope') {
+                        if (row.hostname) uniqueHostnames[row.hostname] = team;
+                    }
+                });
+
+                // Deduplicate Titles (Smart Mapping)
+                const uniqueTitles = {};
+                manualOverrides.forEach(row => {
+                    const team = row.Assigned_Team;
+                    if (row.Title) {
+                        // Teams that should be saved directly (not as Application)
+                        const directTeams = ['System Admin', 'Out of Linux Scope', 'Out of Platform Scope', 'Unclassified'];
+                        if (directTeams.includes(team)) {
+                            // Direct mapping for these categories
+                            uniqueTitles[row.Title] = team;
+                        } else {
+                            // If assigned to a specific team (e.g., EMS, ERP), the Title maps to 'Application' category
+                            // The Hostname (handled above) guides it to the specific team.
+                            uniqueTitles[row.Title] = 'Application';
+                        }
+                    }
+                });
+
+                const hCount = Object.keys(uniqueHostnames).length;
+                const tCount = Object.keys(uniqueTitles).length;
+
+                if (!confirm(`Found ${manualOverrides.length} corrections.\n\nExtracting:\n• ${hCount} Unique Hostnames\n• ${tCount} Unique Titles\n\nThis will save ALL of them to the Knowledge Base.\n\nProceed?`)) {
+                    return;
+                }
+
+                const payload = {
+                    hostnames: Object.entries(uniqueHostnames).map(([h, t]) => ({ hostname: h, team: t })),
+                    titles: Object.entries(uniqueTitles).map(([title, t]) => ({ title: title, team: t }))
+                };
+
+                setLoading(true);
+                try {
+                    const res = await fetch('/kb/bulk_add_rules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const json = await res.json();
+                    alert(json.message);
+                } catch (err) {
+                    alert(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const exportData = async (type) => {
+                if (exportingType) return;
+                setExportingType(type);
+                try {
+                    const res = await fetch('/export', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data, type })
+                    });
+                    if (!res.ok) throw new Error('Export failed');
+
+                    // Get content type and filename from headers
+                    const contentType = res.headers.get('content-type');
+                    const contentDisposition = res.headers.get('content-disposition');
+                    let filename = type === 'master' ? 'classified_report.xlsx' : 'team_reports.zip';
+
+                    // Extract filename from content-disposition if available
+                    if (contentDisposition) {
+                        const match = contentDisposition.match(/filename=([^;]+)/);
+                        if (match) filename = match[1].replace(/["']/g, '');
+                    }
+
+                    const blob = await res.blob();
+
+                    // Force complete progress on success
+                    setExportProgress(100);
+                    await new Promise(r => setTimeout(r, 200));
+
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(downloadUrl);
+                } catch (err) {
+                    alert(err.message);
+                } finally {
+                    setExportingType(null);
+                    setExportProgress(0);
+                }
+            }
+
+            // --- Knowledge Base Logic ---
+            const [kbData, setKbData] = useState({ hostnames: [], titles: [], teams: [] });
+            const [kbTab, setKbTab] = useState('hostnames');
+            const [kbSearch, setKbSearch] = useState('');
+            const [newRule, setNewRule] = useState({ key: '', team: '' });
+            const [editingItem, setEditingItem] = useState(null); // { originalKey, key, team }
+
+            const fetchKbData = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch('/kb/data');
+                    if (!res.ok) throw new Error('Failed to load KB');
+                    const json = await res.json();
+                    setKbData(json);
+                } catch (err) {
+                    alert(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleAddRule = async () => {
+                if (!newRule.key || !newRule.team) return alert("Please fill all fields");
+
+                try {
+                    const res = await fetch('/kb/add_rule', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: kbTab === 'hostnames' ? 'hostname' : 'title',
+                            key: newRule.key,
+                            team: newRule.team
+                        })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert("Rule Added! (Note: Restart app to apply to new uploads)");
+                        setNewRule({ key: '', team: '' });
+                        fetchKbData(); // Refresh list
+                    } else {
+                        alert("Error: " + json.message);
+                    }
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            const handleEditRule = async () => {
+                if (!editingItem || !editingItem.key || !editingItem.team) return alert("Please fill all fields");
+
+                try {
+                    const res = await fetch('/kb/edit_rule', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: kbTab === 'hostnames' ? 'hostname' : 'title',
+                            old_key: editingItem.originalKey,
+                            new_key: editingItem.key,
+                            new_team: editingItem.team
+                        })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert("Rule Updated!");
+                        setEditingItem(null);
+                        fetchKbData();
+                    } else {
+                        alert("Error: " + json.message);
+                    }
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            const handleDeleteRule = async (key) => {
+                if (!confirm(`Are you sure you want to delete this rule?\n\n${key}`)) return;
+
+                try {
+                    const res = await fetch('/kb/delete_rule', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: kbTab === 'hostnames' ? 'hostname' : 'title',
+                            key: key
+                        })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert("Rule Deleted!");
+                        fetchKbData();
+                    } else {
+                        alert("Error: " + json.message);
+                    }
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            const downloadKb = async () => {
+                window.location.href = '/kb/export';
+            };
+
+            const uploadKb = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (!confirm("This will merge/overwrite the database with the uploaded Excel. Proceed?")) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+                setLoading(true);
+                try {
+                    const res = await fetch('/kb/import', { method: 'POST', body: formData });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.error || 'Import failed');
+
+                    alert(json.message + "\n\nPage will reload to reflect changes.");
+                    window.location.reload();
+                } catch (err) {
+                    alert(err.message);
+                } finally {
+                    setLoading(false);
+                    // Reset input
+                    e.target.value = '';
+                }
+            };
+
+            const startEditing = (item) => {
+                const key = kbTab === 'hostnames' ? item.hostname : item.title;
+                setEditingItem({ originalKey: key, key: key, team: item.team });
+            };
+
+            const filteredKbList = useMemo(() => {
+                const list = kbTab === 'hostnames' ? kbData.hostnames : kbData.titles;
+                if (!kbSearch) return list;
+                return list.filter(item => {
+                    const val = kbTab === 'hostnames' ? item.hostname : item.title;
+                    return val.toLowerCase().includes(kbSearch.toLowerCase()) ||
+                        item.team.toLowerCase().includes(kbSearch.toLowerCase());
+                });
+            }, [kbData, kbTab, kbSearch]);
+
+
+            // Pagination State
+            const [currentPage, setCurrentPage] = useState(1);
+            const [itemsPerPage, setItemsPerPage] = useState(50);
+
+            // Reset page on filter change
+            useEffect(() => {
+                setCurrentPage(1);
+            }, [filter, debouncedFilters, sortConfig, itemsPerPage]);
+
+            const paginatedData = useMemo(() => {
+                const start = (currentPage - 1) * itemsPerPage;
+                return processedData.slice(start, start + itemsPerPage);
+            }, [processedData, currentPage, itemsPerPage]);
+
+            const totalPages = Math.ceil(processedData.length / itemsPerPage);
+
+
+            return (
+                <div className="min-h-screen p-8 transition-colors duration-300">
+
+                    {/* Sidebar Overlay */}
+                    {sidebarOpen && (
+                        <div
+                            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                            onClick={() => setSidebarOpen(false)}
+                        ></div>
+                    )}
+
+                    {/* Sidebar Menu */}
+                    <div className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 shadow-2xl z-50 transform sidebar ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                        <div className="p-6 flex flex-col h-full">
+                            <div className="flex justify-between items-center mb-8 border-b dark:border-gray-700 pb-4">
+                                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Menu</h2>
+                                <button onClick={() => setSidebarOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl">×</button>
+                            </div>
+
+                            <nav className="flex-1 space-y-4">
+                                <button onClick={() => { setView(data.length > 0 ? 'review' : 'upload'); setSidebarOpen(false) }} className="block w-full text-left px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium">
+                                    🏠 Home / Analysis
+                                </button>
+                                <button onClick={() => { setView('kb'); setSidebarOpen(false); fetchKbData(); }} className="block w-full text-left px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium">
+                                    📚 Knowledge Base
+                                </button>
+
+                                {% if user_info and user_info.is_admin %}
+                                <hr className="border-gray-200 dark:border-gray-700 my-4" />
+                                <div className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Settings</div>
+                                <a href="/settings/users" className="block w-full text-left px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium">
+                                    👥 User Management
+                                </a>
+                                <a href="/settings/ldap" className="block w-full text-left px-4 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium">
+                                    🔐 LDAP Settings
+                                </a>
+                                {% endif %}
+
+                                <hr className="border-gray-200 dark:border-gray-700 my-4" />
+                                <div className="flex items-center justify-between px-4 py-2">
+                                    <span className="text-gray-700 dark:text-gray-200 font-medium">Dark Mode</span>
+                                    <button
+                                        onClick={toggleTheme}
+                                        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${theme === 'dark' ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                    >
+                                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-6' : ''}`}></div>
+                                    </button>
+                                </div>
+                            </nav>
+
+                            {/* User Info & Logout */}
+                            <div className="pt-4 border-t dark:border-gray-700">
+                                {% if user_info and user_info.auth_enabled %}
+                                <div className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <div className="font-medium text-gray-800 dark:text-white">{{ user_info.display_name }}</div>
+                                    <div className="text-xs">{{ user_info.username }} ({{ user_info.role_display }})</div>
+                                </div>
+                                <a href="/logout" className="block w-full text-left px-4 py-2 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 font-medium text-sm">
+                                    🚪 Logout
+                                </a>
+                                {% else %}
+                                <div className="px-4 py-2 text-xs text-gray-500">
+                                    🔓 Authentication: Disabled
+                                </div>
+                                {% endif %}
+                                <div className="text-xs text-gray-400 mt-2 px-4">
+                                    VAAS v3.5 <br />
+                                    © 2025 DevOps
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <header className="mb-8 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            {/* Hamburger Menu Button */}
+                            <button
+                                onClick={() => setSidebarOpen(true)}
+                                className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                title="Open Menu"
+                            >
+                                <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                </svg>
+                            </button>
+                            <img src="{{ url_for('static', filename='img/Logo.png') }}" alt="Logo" className="h-12 w-auto" />
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">VAAS: Vulnerability Auto Assignment Solution</h1>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {/* Navigation */}
+                            <button
+                                onClick={() => data.length > 0 ? setView('review') : setView('upload')}
+                                className={`px-3 py-1 rounded transition-colors ${view === 'upload' || view === 'review' ? 'bg-gray-200 dark:bg-gray-700 font-bold dark:text-white' : 'text-blue-600 dark:text-blue-400 hover:underline'}`}
+                            >Analysis</button>
+
+                            {view === 'review' && (
+                                <button
+                                    onClick={() => {
+                                        if (confirm("Start a new analysis? Current results will be lost.")) {
+                                            setData([]);
+                                            setStats({ total: 0, auto: 0, review: 0 });
+                                            setView('upload');
+                                            setCurrentFileName('');
+                                        }
+                                    }}
+                                    className="px-3 py-1 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 text-xs font-bold"
+                                > Upload New File ↺</button>
+                            )}
+
+                            <button
+                                onClick={() => { setView('kb'); fetchKbData(); }}
+                                className={`px-3 py-1 rounded transition-colors ${view === 'kb' ? 'bg-gray-200 dark:bg-gray-700 font-bold dark:text-white' : 'text-blue-600 dark:text-blue-400 hover:underline'}`}
+                            >Knowledge Base</button>
+
+                            {currentFileName && view === 'review' && (
+                                <span className="ml-4 text-gray-600 dark:text-gray-300 font-medium bg-gray-100 dark:bg-gray-800 border dark:border-gray-700 px-3 py-1 rounded">
+                                    📄 {currentFileName}
+                                </span>
+                            )}
+
+                            {/* Dark Mode Toggle */}
+                            <button
+                                onClick={toggleTheme}
+                                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-2"
+                                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                            >
+                                {theme === 'dark' ? (
+                                    <span className="text-yellow-400 text-xl">☀️</span>
+                                ) : (
+                                    <span className="text-gray-600 text-xl">🌙</span>
+                                )}
+                            </button>
+                        </div>
+                    </header>
+
+                    {error && (
+                        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
+                            {error}
+                        </div>
+                    )}
+
+                    {view === 'upload' && (
+                        <div className="max-w-xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer"
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                if (!loading && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                    handleFileUpload(e.dataTransfer.files[0]);
+                                }
+                            }}>
+
+                            {loading ? (
+                                <div className="w-full">
+                                    <div className="flex justify-center mb-4">
+                                        {% raw %}
+                                        <svg className="w-24 h-24" viewBox="0 0 100 100">
+                                            {/* Large Gear - spins clockwise */}
+                                            <g className="gear-spin" style={{ transformOrigin: '35px 45px' }}>
+                                                <circle cx="35" cy="45" r="20" fill="#3b82f6" />
+                                                <circle cx="35" cy="45" r="8" fill="#1e40af" />
+                                                <circle cx="35" cy="45" r="4" fill="#60a5fa" />
+                                                {/* Gear teeth */}
+                                                {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+                                                    <rect key={i} x="32" y="20" width="6" height="10" rx="1" fill="#3b82f6"
+                                                        transform={`rotate(${angle} 35 45)`} />
+                                                ))}
+                                            </g>
+                                            {/* Small Gear - spins counter-clockwise */}
+                                            <g className="gear-spin-reverse" style={{ transformOrigin: '68px 62px' }}>
+                                                <circle cx="68" cy="62" r="14" fill="#60a5fa" />
+                                                <circle cx="68" cy="62" r="5" fill="#3b82f6" />
+                                                <circle cx="68" cy="62" r="2.5" fill="#93c5fd" />
+                                                {/* Gear teeth */}
+                                                {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+                                                    <rect key={i} x="66" y="44" width="4" height="7" rx="1" fill="#60a5fa"
+                                                        transform={`rotate(${angle} 68 62)`} />
+                                                ))}
+                                            </g>
+                                        </svg>
+                                        {% endraw %}
+                                    </div>
+                                    <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Processing Report...</h2>
+                                    <p className="text-gray-500 dark:text-gray-400 mb-6">{progressText}</p>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-2">
+                                        {% raw %}
+                                        <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: progress + '%' }}></div>
+                                        {% endraw %}
+                                    </div>
+                                </div>
+                            ) : (
+                                <React.Fragment>
+                                    <div className="text-6xl text-gray-300 dark:text-gray-600 mb-4">📂</div>
+                                    <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Drag & Drop Report Here</h2>
+                                    <p className="text-gray-500 dark:text-gray-400 mb-6">or click to browse Excel files</p>
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        id="fileInput"
+                                        accept=".xlsx"
+                                        onChange={(e) => e.target.files[0] && handleFileUpload(e.target.files[0])}
+                                    />
+                                    <label htmlFor="fileInput" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 cursor-pointer transition shadow-lg">
+                                        Select File
+                                    </label>
+                                </React.Fragment>
+                            )}
+                        </div>
+                    )}
+
+                    {view === 'review' && (
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col h-[calc(100vh-150px)] border dark:border-gray-700">
+                            <div className="p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
+                                <div className="flex gap-4 text-sm">
+                                    <button
+                                        onClick={() => setFilter('all')}
+                                        className={`px-3 py-1 rounded-full font-medium transition ${filter === 'all' ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'}`}
+                                    >
+                                        Total: {stats.total}
+                                    </button>
+                                    <button
+                                        onClick={() => setFilter('auto')}
+                                        className={`px-3 py-1 rounded-full font-medium transition ${filter === 'auto' ? 'bg-green-600 text-white shadow-md' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'}`}
+                                    >
+                                        Auto Assignment: {stats.auto}
+                                    </button>
+                                    <button
+                                        onClick={() => setFilter('fuzzy')}
+                                        className={`px-3 py-1 rounded-full font-medium transition ${filter === 'fuzzy' ? 'bg-orange-500 text-white shadow-md' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'}`}
+                                    >
+                                        Auto Prediction: {stats.fuzzy}
+                                    </button>
+                                    <button
+                                        onClick={() => setFilter('review')}
+                                        className={`px-3 py-1 rounded-full font-medium transition ${filter === 'review' ? 'bg-yellow-500 text-white shadow-md' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'}`}
+                                    >
+                                        Review: {stats.review}
+                                    </button>
+                                    <span className="ml-4 text-gray-500 dark:text-gray-400 border-l dark:border-gray-600 pl-4 self-center">
+                                        Page {currentPage} of {totalPages || 1}
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => exportData('master')}
+                                        disabled={!!exportingType}
+                                        className={`relative w-48 px-4 py-2 border dark:border-gray-600 rounded text-sm overflow-hidden group transition-colors ${!!exportingType ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                                        title="Download the full report as a single Excel file."
+                                    >
+                                        {exportingType === 'master' && (
+                                            {% raw %}
+                                        <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900/50 transition-all ease-out h-full" style={{ width: exportProgress + '%' }}></div>
+                                        {% endraw %}
+                                        )}
+                                        <div className={`relative z-10 flex items-center justify-center gap-2 ${exportingType === 'master' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
+                                            {exportingType === 'master' ? (
+                                                <React.Fragment>
+                                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    <span>Generating...</span>
+                                                </React.Fragment>
+                                            ) : (
+                                                <React.Fragment>⬇ Export Master</React.Fragment>
+                                            )}
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => exportData('teams')}
+                                        disabled={!!exportingType}
+                                        className={`relative w-48 px-4 py-2 border rounded text-sm overflow-hidden group transition-colors ${!!exportingType ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                                        title="Download separate Excel files for each team, zipped together."
+                                    >
+                                        {exportingType === 'teams' && (
+                                            {% raw %}
+                                        <div className="absolute inset-0 bg-green-100 dark:bg-green-900/50 transition-all ease-out h-full" style={{ width: exportProgress + '%' }}></div>
+                                        {% endraw %}
+                                        )}
+                                        <div className={`relative z-10 flex items-center justify-center gap-2 ${exportingType === 'teams' ? 'text-green-700 dark:text-green-300' : 'text-gray-700 dark:text-gray-200'}`}>
+                                            {exportingType === 'teams' ? (
+                                                <React.Fragment>
+                                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    <span>Zipping...</span>
+                                                </React.Fragment>
+                                            ) : (
+                                                <React.Fragment>⬇ Export Teams ZIP</React.Fragment>
+                                            )}
+                                        </div>
+                                    </button>
+
+                                    <div className="flex flex-col items-end">
+                                        <div className="flex gap-2">
+                                            {USER_PERMISSIONS.canModifyKb && (
+                                                <button
+                                                    onClick={saveCorrectionsToKb}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-bold shadow"
+                                                    title="Permanently save Hostnames AND Titles to the Knowledge Base."
+                                                >💾 Save Rules to KB</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="overflow-auto flex-1">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-100 dark:bg-gray-900 sticky top-0 z-10">
+                                        <tr>
+                                            <th className="p-3 font-semibold text-gray-600 dark:text-gray-300 cursor-pointer" onClick={() => requestSort('hostname')}>
+                                                Hostname {getSortIcon('hostname')}
+                                                {renderFilterInput('hostname', 'Host')}
+                                            </th>
+                                            <th className="p-3 font-semibold text-gray-600 dark:text-gray-300 cursor-pointer" onClick={() => requestSort('Title')}>
+                                                Title {getSortIcon('Title')}
+                                                {renderFilterInput('Title', 'Title')}
+                                            </th>
+
+                                            <th className="p-3 font-semibold text-gray-600 dark:text-gray-300 cursor-pointer" onClick={() => requestSort('Assigned_Team')}>
+                                                Assigned Team {getSortIcon('Assigned_Team')}
+                                                {renderFilterInput('Assigned_Team', 'Team')}
+                                            </th>
+                                            <th className="p-3 font-semibold text-gray-600 dark:text-gray-300 cursor-pointer" onClick={() => requestSort('Reason')}>
+                                                Reason {getSortIcon('Reason')}
+                                                {renderFilterInput('Reason', 'Reason')}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {paginatedData.map((row, idx) => (
+                                            <tr
+                                                key={idx}
+                                                className={`cursor-pointer transition-colors ${row.Method === 'Fuzzy' ? "bg-orange-100 dark:bg-orange-900/20 hover:bg-orange-200 dark:hover:bg-orange-900/40" :
+                                                    (row.Needs_Review ? "bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/40" : "hover:bg-blue-50 dark:hover:bg-gray-700")
+                                                    }`}
+                                                onClick={() => setSelectedRow(row)}
+                                            >
+                                                <td className="p-3 max-w-xs truncate text-gray-800 dark:text-gray-200" title={row.hostname}>{row.hostname}</td>
+                                                <td className="p-3 max-w-sm truncate text-gray-800 dark:text-gray-200" title={row.Title}>{row.Title}</td>
+
+                                                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                                    <select
+                                                        className={`border rounded px-2 py-1 w-full text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 ${row.Needs_Review ? 'border-yellow-400 dark:border-yellow-600' : 'border-gray-300 dark:border-gray-600'} ${!USER_PERMISSIONS.canModify ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                                        value={row.Assigned_Team}
+                                                        onChange={(e) => handleTeamChangeSafe(row, e.target.value)}
+                                                        disabled={!USER_PERMISSIONS.canModify}
+                                                        title={!USER_PERMISSIONS.canModify ? 'You do not have permission to modify assignments' : ''}
+                                                    >
+                                                        {TEAMS_LIST.map(t => (
+                                                            <option key={t} value={t}>{t}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="p-3 text-gray-500 dark:text-gray-400 text-xs">{row.Reason}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination Controls */}
+                            <div className="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-center gap-4 items-center">
+                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                    <span className="text-sm">Rows per page:</span>
+                                    <select
+                                        className="border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                        value={itemsPerPage}
+                                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={20}>20</option>
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                        <option value={200}>200</option>
+                                    </select>
+                                </div>
+
+                                <button
+                                    className="px-4 py-2 border dark:border-gray-600 rounded disabled:opacity-50 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >Previous</button>
+                                <span className="self-center font-medium text-gray-700 dark:text-gray-200">
+                                    Page {currentPage} of {totalPages || 1}
+                                </span>
+                                <button
+                                    className="px-4 py-2 border dark:border-gray-600 rounded disabled:opacity-50 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >Next</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'kb' && (
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col h-[calc(100vh-150px)] border dark:border-gray-700">
+                            <div className="p-6 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
+                                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Knowledge Base Management</h2>
+
+                                <div className="flex gap-2">
+                                    {USER_PERMISSIONS.canModifyKb && (
+                                        <button
+                                            onClick={downloadKb}
+                                            className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-3 rounded shadow text-sm flex items-center gap-2"
+                                            title="Download DB as Excel"
+                                        >
+                                            <span>Download DB</span>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        </button>
+                                    )}
+
+                                    {USER_PERMISSIONS.canModifyKb && (
+                                        <div className="relative group">
+                                            <input
+                                                type="file"
+                                                accept=".xlsx"
+                                                onChange={uploadKb}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                title="Upload DB Excel"
+                                            />
+                                            <button className="bg-blue-600 group-hover:bg-blue-700 text-white font-medium py-1 px-3 rounded shadow text-sm flex items-center gap-2 transition-colors">
+                                                <span>Restore DB</span>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Tabs */}
+                            <div className="flex gap-4 mb-6 border-b dark:border-gray-700">
+                                <button
+                                    className={`pb-2 px-4 font-medium transition-colors ${kbTab === 'hostnames' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                    onClick={() => setKbTab('hostnames')}
+                                >Hostnames ({kbData.hostnames.length})</button>
+                                <button
+                                    className={`pb-2 px-4 font-medium transition-colors ${kbTab === 'titles' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                    onClick={() => setKbTab('titles')}
+                                >Title Rules ({kbData.titles.length})</button>
+                            </div>
+
+                            {/* Add New Form */}
+                            {USER_PERMISSIONS.canModifyKb && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-6 flex gap-4 items-end border dark:border-blue-900/50">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                            {kbTab === 'hostnames' ? 'New Hostname' : 'New Title Pattern'}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full border dark:border-gray-600 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                            placeholder={kbTab === 'hostnames' ? 'e.g. server-db-01' : 'e.g. SQL Injection'}
+                                            value={newRule.key}
+                                            onChange={e => setNewRule({ ...newRule, key: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="w-64">
+                                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Assign To Team</label>
+                                        <select
+                                            className="w-full border dark:border-gray-600 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                            value={newRule.team}
+                                            onChange={e => setNewRule({ ...newRule, team: e.target.value })}
+                                        >
+                                            <option value="">Select Team...</option>
+                                            {TEAMS_LIST.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={handleAddRule}
+                                        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 text-sm font-bold shadow"
+                                    >Add Rule +</button>
+                                </div>
+                            )}
+
+                            {/* Search */}
+                            <input
+                                type="text"
+                                placeholder="Search rules..."
+                                className="w-full border dark:border-gray-600 rounded px-4 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                value={kbSearch}
+                                onChange={e => setKbSearch(e.target.value)}
+                            />
+
+                            {/* Table */}
+                            <div className="overflow-auto flex-1 p-0 bg-white dark:bg-gray-800">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-100 dark:bg-gray-900 sticky top-0 z-10">
+                                        <tr>
+                                            <th className="p-3 font-semibold text-gray-600 dark:text-gray-300 w-1/2">
+                                                {kbTab === 'hostnames' ? 'Hostname' : 'Title Pattern'}
+                                            </th>
+                                            <th className="p-3 font-semibold text-gray-600 dark:text-gray-300 w-1/4">Assigned Team</th>
+                                            <th className="p-3 font-semibold text-gray-600 dark:text-gray-300 w-1/4 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {filteredKbList.map((item, idx) => {
+                                            const itemKey = kbTab === 'hostnames' ? item.hostname : item.title;
+                                            const isEditing = editingItem && editingItem.originalKey === itemKey;
+
+                                            return (
+                                                <tr key={idx} className={isEditing ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"}>
+                                                    <td className="p-3">
+                                                        {isEditing ? (
+                                                            <input
+                                                                type="text"
+                                                                className="w-full border dark:border-gray-600 rounded px-2 py-1 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                                                value={editingItem.key}
+                                                                onChange={e => setEditingItem({ ...editingItem, key: e.target.value })}
+                                                            />
+                                                        ) : (
+                                                            <span className="text-gray-800 dark:text-gray-200 font-mono text-xs">{itemKey}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3">
+                                                        {isEditing ? (
+                                                            <select
+                                                                className="w-full border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                                                value={editingItem.team}
+                                                                onChange={e => setEditingItem({ ...editingItem, team: e.target.value })}
+                                                            >
+                                                                {TEAMS_LIST.map(t => <option key={t} value={t}>{t}</option>)}
+                                                            </select>
+                                                        ) : (
+                                                            <span className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 px-2 py-1 rounded text-xs font-medium border dark:border-gray-600">
+                                                                {item.team}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-3 text-right pr-8">
+                                                        {isEditing ? (
+                                                            <div className="flex gap-2 justify-end">
+                                                                <button
+                                                                    onClick={handleEditRule}
+                                                                    className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                                                                >Save</button>
+                                                                <button
+                                                                    onClick={() => setEditingItem(null)}
+                                                                    className="px-3 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500"
+                                                                >Cancel</button>
+                                                            </div>
+                                                        ) : (
+                                                            USER_PERMISSIONS.canModifyKb ? (
+                                                                <div className="flex gap-2 justify-end">
+                                                                    <button
+                                                                        onClick={() => startEditing(item)}
+                                                                        className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                                                                    >Edit</button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteRule(itemKey)}
+                                                                        className="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
+                                                                    >Delete</button>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400 whitespace-nowrap">View Only</span>
+                                                            )
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {filteredKbList.length === 0 && (
+                                            <tr>
+                                                <td colSpan="3" className="p-8 text-center text-gray-400 dark:text-gray-500">
+                                                    No rules found matching your search.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )
+                    }
+
+                    {/* Row Detail Modal */}
+                    {
+                        selectedRow && (
+                            <div
+                                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                                onClick={() => setSelectedRow(null)}
+                            >
+                                <div
+                                    className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border dark:border-gray-700"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {/* Modal Header */}
+                                    <div className="bg-gray-100 dark:bg-gray-900 px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
+                                        <h2 className="text-lg font-bold text-gray-800 dark:text-white">Row Details</h2>
+                                        <button
+                                            onClick={() => setSelectedRow(null)}
+                                            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl font-bold leading-none"
+                                        >×</button>
+                                    </div>
+
+                                    {/* Modal Body */}
+                                    <div className="overflow-auto flex-1 p-6 bg-white dark:bg-gray-800">
+                                        <table className="w-full text-sm">
+                                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                                {Object.entries(selectedRow).map(([key, value]) => (
+                                                    <tr key={key} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                        <td className="py-3 pr-4 font-semibold text-gray-600 dark:text-gray-300 w-1/3 align-top">
+                                                            {key}
+                                                        </td>
+                                                        <td className="py-3 text-gray-800 dark:text-gray-200 break-words">
+                                                            {typeof value === 'boolean' ? (
+                                                                <span className={`px-2 py-1 rounded text-xs ${value ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'}`}>
+                                                                    {value ? 'Yes' : 'No'}
+                                                                </span>
+                                                            ) : formatValue(key, value) ? (
+                                                                <span className="font-mono text-blue-700 dark:text-blue-400">
+                                                                    {formatValue(key, value)}
+                                                                </span>
+                                                            ) : typeof value === 'number' ? (
+                                                                <span className="font-mono">
+                                                                    {key.toLowerCase().includes('score') || key.toLowerCase().includes('conf')
+                                                                        ? `${(value * 100).toFixed(1)}%`
+                                                                        : value}
+                                                                </span>
+                                                            ) : value === null || value === undefined ? (
+                                                                <span className="text-gray-400 italic">N/A</span>
+                                                            ) : (
+                                                                <span className="whitespace-pre-wrap">{String(value)}</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Modal Footer */}
+                                    <div className="bg-gray-50 dark:bg-gray-900 px-6 py-4 border-t dark:border-gray-700 flex justify-between items-center">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {Object.keys(selectedRow).length} fields
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <select
+                                                className={`border dark:border-gray-600 rounded px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 ${!USER_PERMISSIONS.canModify ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                value={selectedRow.Assigned_Team}
+                                                disabled={!USER_PERMISSIONS.canModify}
+                                                onChange={(e) => {
+                                                    handleTeamChangeSafe(selectedRow, e.target.value);
+                                                    setSelectedRow({ ...selectedRow, Assigned_Team: e.target.value, Needs_Review: false, Method: 'Manual Override', Confidence_Score: 1.0 });
+                                                }}
+                                            >
+                                                {TEAMS_LIST.map(t => (
+                                                    <option key={t} value={t}>{t}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={() => setSelectedRow(null)}
+                                                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                                            >Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    }
+                </div >
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/static/img/Logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VAAS - Vulnerability Assignment</title>
+  </head>
+  <body class="bg-gray-50 text-gray-800 font-sans transition-colors duration-300">
+    <div id="root"></div>
+    <script>
+      // Configuration will be injected by Flask or set here for development
+      window.__VAAS_CONFIG__ = window.__VAAS_CONFIG__ || {
+        teamsList: [
+          'Unclassified',
+          'Application',
+          'System Admin',
+          'Out of Linux Scope',
+          'Out of Platform Scope',
+          'EMS',
+          'ERP',
+          'CRM'
+        ],
+        permissions: {
+          canModify: true,
+          canModifyKb: true,
+          canExport: true,
+          canManageUsers: true,
+          role: 'administrator'
+        },
+        userInfo: null
+      };
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
