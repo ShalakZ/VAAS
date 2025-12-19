@@ -135,7 +135,7 @@ export function Sidebar({
               </div>
             )}
             <div className="text-xs text-gray-400 dark:text-gray-500 mt-2 px-4">
-              VAAS v3.5 <br />
+              VAAS v1.0 <br />
               © 2025 DevOps
             </div>
           </div>

@@ -53,6 +53,7 @@ VAAS/
 ├── vaas/                      # Backend Python package
 │   ├── main.py               # Flask app factory
 │   ├── config.py             # Configuration (env var support)
+│   ├── constants.py          # Centralized string constants
 │   ├── core/                 # Core classification logic
 │   │   ├── classifier.py     # RuleEngine (fuzzy matching, rules)
 │   │   ├── knowledge.py      # KnowledgeBase (database operations)
@@ -72,7 +73,7 @@ VAAS/
 │   │   ├── settings.py       # DB settings management
 │   │   └── env_config.py     # Environment-based config
 │   ├── logs/                 # Audit logging
-│   └── static/               # Legacy static files (admin templates)
+│   └── static/               # Static files (admin templates)
 ├── frontend/                 # React frontend source
 │   ├── src/
 │   │   ├── components/       # Reusable UI components
@@ -82,16 +83,15 @@ VAAS/
 │   │   └── context/          # React contexts
 │   ├── package.json
 │   └── vite.config.js
-├── data/                     # Data directory
-│   ├── knowledge_base.db     # SQLite database
-│   ├── Hostnames.xlsx        # Initial hostname mappings
-│   ├── VA Titles.xlsx        # Initial title patterns
+├── data/                     # Data directory (runtime)
+│   ├── *.json.example        # Config templates
 │   ├── uploads/              # Temporary upload storage
-│   └── outputs/              # Export outputs
-├── docs/                     # Documentation
+│   ├── outputs/              # Export outputs
+│   └── logs/                 # Application logs
+├── Dockerfile                # Multi-stage Docker build
+├── docker-compose.yml        # Container orchestration
 ├── requirements.txt          # Python dependencies
-├── .env.example             # Environment template
-└── CLAUDE.md                # AI assistant instructions
+└── .env.example              # Environment template
 ```
 
 ---
@@ -272,9 +272,34 @@ sudo systemctl enable vaas
 sudo systemctl start vaas
 ```
 
-### Option 2: Docker (Coming Soon)
+### Option 2: Docker (Recommended)
 
-Docker support with multi-stage builds is in development.
+```bash
+# Clone and navigate to project
+git clone https://github.com/ShalakZ/VAAS.git
+cd VAAS
+
+# Build and run with Docker Compose
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+```
+
+Access the application at **http://localhost:5001**
+
+#### Docker Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `docker compose up -d` | Start in background |
+| `docker compose logs -f` | View live logs |
+| `docker compose down` | Stop containers |
+| `docker compose down -v` | Stop and remove data |
+| `docker compose build --no-cache` | Rebuild image |
 
 ---
 

@@ -53,7 +53,7 @@ def health_check():
             return jsonify({
                 'status': 'healthy',
                 'database': 'connected',
-                'version': '4.0'
+                'version': '1.0'
             }), 200
         else:
             return jsonify({
