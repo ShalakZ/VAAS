@@ -7,7 +7,6 @@ import os
 import json
 import logging
 from functools import wraps
-from urllib.parse import urlparse, urljoin
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
 
@@ -25,16 +24,37 @@ logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__, template_folder='../web/templates')
 
 
-def is_safe_url(target):
+# Whitelist of allowed redirect endpoints after login
+ALLOWED_REDIRECT_ENDPOINTS = frozenset([
+    'web.index',
+    'web.kb_settings_page',
+    'db.database_settings_page',
+    'auth.user_management_page',
+    'auth.ldap_settings_page',
+    'logs.audit_logs_page',
+])
+
+
+def get_safe_redirect_url(next_param):
     """
-    Validate that the redirect target URL is safe (internal to the application).
-    Prevents open redirect attacks by ensuring the URL points to the same host.
+    Get a safe redirect URL from the next parameter.
+    Only allows whitelisted internal endpoints to prevent open redirect attacks.
+    Returns the default index URL if the next parameter is invalid.
     """
-    if not target:
-        return False
-    ref_url = urlparse(request.host_url)
-    test_url = urlparse(urljoin(request.host_url, target))
-    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+    if not next_param:
+        return url_for('web.index')
+
+    # Try to match against whitelisted endpoints by checking the path
+    for endpoint in ALLOWED_REDIRECT_ENDPOINTS:
+        try:
+            endpoint_url = url_for(endpoint)
+            if next_param == endpoint_url or next_param.rstrip('/') == endpoint_url.rstrip('/'):
+                return endpoint_url
+        except Exception:
+            continue
+
+    # Default to index if no match found
+    return url_for('web.index')
 
 # LDAP Settings file path
 LDAP_SETTINGS_FILE = os.path.join(Config.DATA_DIR, 'ldap_settings.json')
@@ -206,10 +226,9 @@ def login():
                 level=LogLevel.INFO,
                 details={'username': username, 'auth_type': user.auth_type}
             )
-            next_page = request.args.get('next')
-            if not is_safe_url(next_page):
-                next_page = url_for('web.index')
-            return redirect(next_page)
+            # Get safe redirect URL from whitelist (never uses user input directly)
+            safe_redirect = get_safe_redirect_url(request.args.get('next'))
+            return redirect(safe_redirect)
         else:
             flash('Invalid username or password', 'error')
             logger.warning(f"Failed login attempt for: {username}")
