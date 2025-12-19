@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  vaas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vaas
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      # Flask settings
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-change-me-in-production}
+      - FLASK_DEBUG=0
+
+      # Classification settings
+      - VAAS_THRESHOLD=${VAAS_THRESHOLD:-0.85}
+
+      # Data directory (inside container)
+      - VAAS_DATA_DIR=/app/data
+    volumes:
+      # Persist data directory
+      - vaas-data:/app/data
+
+      # Optional: Mount config files from host
+      # - ./data/database_settings.json:/app/data/database_settings.json:ro
+      # - ./data/ldap_settings.json:/app/data/ldap_settings.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  vaas-data:
+    driver: local

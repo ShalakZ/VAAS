@@ -1,0 +1,62 @@
+# Git
+.git
+.gitignore
+
+# Development files
+_dev/
+scripts/
+CLAUDE.md
+sonar_issues.txt
+*.md
+!README.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js (frontend build happens in Docker)
+frontend/node_modules/
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment (use docker-compose env instead)
+.env
+.env.local
+.env.*.local
+
+# Data (mounted as volumes)
+data/*.db
+data/*.db-journal
+data/*.xlsx
+data/*.json
+data/uploads/*
+data/outputs/*
+data/logs/*
+data/historical/*
+
+# Build artifacts
+frontend/dist/
+vaas/web/static/dist/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
