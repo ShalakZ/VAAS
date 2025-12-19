@@ -57,9 +57,8 @@ COPY --from=frontend-builder /frontend-dist ./vaas/web/static/dist/
 # Copy example config files (will be overwritten by volume mounts)
 COPY data/*.example ./data/
 
-# Copy entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Copy entrypoint script with proper permissions
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/
 
 # Create data directories
 RUN mkdir -p data/uploads data/outputs data/logs data/historical \
