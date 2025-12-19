@@ -83,3 +83,4 @@ _dev/
 scripts/
 sonar_issues.txt
 *.orig
+CLAUDE.md

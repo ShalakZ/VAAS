@@ -4,6 +4,22 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 
 ---
 
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [User Guide](#user-guide)
+- [API Endpoints](#api-endpoints)
+- [Production Deployment](#production-deployment)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+
+---
+
 ## Features
 
 - **Smart Fuzzy Classification**: Matches vulnerability titles against known patterns using advanced fuzzy matching (RapidFuzz)
