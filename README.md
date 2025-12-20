@@ -9,6 +9,7 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
 - [User Guide](#user-guide)
@@ -112,12 +113,72 @@ VAAS/
 
 ---
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
-- Python 3.9+
-- Node.js 18+
-- npm
+### Linux (Ubuntu/Debian VM)
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Git
+sudo apt install -y git curl
+
+# Install Docker
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verify installation
+docker --version
+docker compose version
+git --version
+```
+
+**For manual installation (without Docker):**
+```bash
+# Install Python
+sudo apt install -y python3 python3-pip python3-venv
+
+# Install Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify
+python3 --version
+node --version
+npm --version
+```
+
+### Windows
+
+**Option A: Docker Desktop (Recommended)**
+1. Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+2. During installation, enable **WSL 2** when prompted
+3. Download and install [Git for Windows](https://git-scm.com/download/win)
+4. Restart your computer
+5. Open PowerShell and verify:
+   ```powershell
+   docker --version
+   docker compose version
+   git --version
+   ```
+
+**Option B: Manual Installation (without Docker)**
+1. Download and install [Python 3.12](https://www.python.org/downloads/) - check "Add to PATH"
+2. Download and install [Node.js 20 LTS](https://nodejs.org/)
+3. Download and install [Git for Windows](https://git-scm.com/download/win)
+4. Open PowerShell and verify:
+   ```powershell
+   python --version
+   node --version
+   npm --version
+   git --version
+   ```
+
+---
+
+## Quick Start
 
 ### Installation
 
