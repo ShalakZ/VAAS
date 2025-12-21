@@ -7,17 +7,17 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 ## Table of Contents
 
 - [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
+- [Deployment Options](#deployment-options)
+  - [Option 1: Docker Hub (Quick Deploy)](#option-1-docker-hub-quick-deploy)
+  - [Option 2: Docker (Build from Source)](#option-2-docker-build-from-source)
+  - [Option 3: Manual Installation](#option-3-manual-installation)
+  - [Option 4: Systemd Service](#option-4-systemd-service-linux)
 - [Configuration](#configuration)
 - [User Guide](#user-guide)
-- [API Endpoints](#api-endpoints)
-- [Production Deployment](#production-deployment)
+- [API Reference](#api-reference)
 - [Development](#development)
 - [Troubleshooting](#troubleshooting)
-- [License](#license)
 
 ---
 
@@ -36,210 +36,259 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 - **Bulk Processing**: Handles large datasets (1000+ rows) efficiently
 - **Export Options**: Download full classified report or separate per-team Excel files (zipped)
 - **Dark Mode**: Toggle between light and dark themes
-- **Audit Logging**: Track all user actions and system events
-
----
-
-## Tech Stack
-
-### Backend
-- Python 3.9+
-- Flask 3.0+
-- Flask-Login (authentication)
-- Pandas (data processing)
-- RapidFuzz (fuzzy matching)
-- Gunicorn (production server)
-
-### Frontend
-- React 19
-- Vite 7
-- Tailwind CSS v4
-
-### Database
-- SQLite (default)
-- PostgreSQL (recommended for production)
-- MySQL/MariaDB
-- MS SQL Server / Azure SQL
-
----
-
-## Project Structure
-
-```
-VAAS/
-├── vaas/                      # Backend Python package
-│   ├── main.py               # Flask app factory
-│   ├── config.py             # Configuration (env var support)
-│   ├── constants.py          # Centralized string constants
-│   ├── core/                 # Core classification logic
-│   │   ├── classifier.py     # RuleEngine (fuzzy matching, rules)
-│   │   ├── knowledge.py      # KnowledgeBase (database operations)
-│   │   ├── reports.py        # Report storage
-│   │   └── scheduler.py      # Background cleanup scheduler
-│   ├── web/                  # Web routes and templates
-│   │   ├── routes.py         # API endpoints
-│   │   ├── templates/        # Admin page templates
-│   │   └── static/dist/      # Built React frontend
-│   ├── auth/                 # Authentication module
-│   │   ├── routes.py         # Auth endpoints
-│   │   ├── ldap_auth.py      # LDAP integration
-│   │   ├── user_db.py        # User management
-│   │   └── permissions.py    # RBAC decorators
-│   ├── db/                   # Database abstraction layer
-│   │   ├── providers/        # SQLite, MySQL, PostgreSQL, MSSQL
-│   │   ├── settings.py       # DB settings management
-│   │   └── env_config.py     # Environment-based config
-│   ├── logs/                 # Audit logging
-│   └── static/               # Static files (admin templates)
-├── frontend/                 # React frontend source
-│   ├── src/
-│   │   ├── components/       # Reusable UI components
-│   │   ├── features/         # Feature modules (upload, review, KB)
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── services/         # API client
-│   │   └── context/          # React contexts
-│   ├── package.json
-│   └── vite.config.js
-├── data/                     # Data directory (runtime)
-│   ├── *.json.example        # Config templates
-│   ├── uploads/              # Temporary upload storage
-│   ├── outputs/              # Export outputs
-│   └── logs/                 # Application logs
-├── Dockerfile                # Multi-stage Docker build
-├── docker-compose.yml        # Container orchestration
-├── requirements.txt          # Python dependencies
-└── .env.example              # Environment template
-```
 
 ---
 
 ## Prerequisites
 
-### Linux (Ubuntu/Debian VM)
+### For Docker Deployment (Recommended)
 
+**Linux:**
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Git
-sudo apt install -y git curl
-
 # Install Docker
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER
 newgrp docker
 
-# Verify installation
+# Verify
 docker --version
 docker compose version
-git --version
 ```
 
-**For manual installation (without Docker):**
+**Windows:**
+1. Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+2. Enable **WSL 2** when prompted
+3. Restart your computer
+
+### For Manual Installation (without Docker)
+
+**Linux:**
 ```bash
-# Install Python
-sudo apt install -y python3 python3-pip python3-venv
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git curl
 
 # Install Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
-
-# Verify
-python3 --version
-node --version
-npm --version
 ```
 
-### Windows
-
-**Option A: Docker Desktop (Recommended)**
-1. Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-2. During installation, enable **WSL 2** when prompted
-3. Download and install [Git for Windows](https://git-scm.com/download/win)
-4. Restart your computer
-5. Open PowerShell and verify:
-   ```powershell
-   docker --version
-   docker compose version
-   git --version
-   ```
-
-**Option B: Manual Installation (without Docker)**
-1. Download and install [Python 3.12](https://www.python.org/downloads/) - check "Add to PATH"
-2. Download and install [Node.js 20 LTS](https://nodejs.org/)
-3. Download and install [Git for Windows](https://git-scm.com/download/win)
-4. Open PowerShell and verify:
-   ```powershell
-   python --version
-   node --version
-   npm --version
-   git --version
-   ```
+**Windows:**
+1. Install [Python 3.12](https://www.python.org/downloads/) - check "Add to PATH"
+2. Install [Node.js 20 LTS](https://nodejs.org/)
+3. Install [Git for Windows](https://git-scm.com/download/win)
 
 ---
 
-## Quick Start
+## Deployment Options
 
-### Installation
+### Option 1: Docker Hub (Quick Deploy)
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/ShalakZ/VAAS.git
-   cd VAAS
-   ```
+Pull the pre-built image - no build required.
 
-2. **Set up Python environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or: venv\Scripts\activate  # Windows
-   pip install -r requirements.txt
-   ```
+**One-liner deployment:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/ShalakZ/VAAS/main/deploy.sh | bash
+```
 
-3. **Build the frontend**
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   cd ..
-   ```
+**Or using Docker Compose (recommended for customization):**
+```bash
+# Download the production compose file
+curl -O https://raw.githubusercontent.com/ShalakZ/VAAS/main/docker-compose.prod.yml
 
-4. **Configure environment** (optional)
-   ```bash
-   cp .env.example .env
-   # Edit .env with your settings
-   ```
+# Edit configuration (port, LDAP, database, etc.)
+nano docker-compose.prod.yml
 
-5. **Run the application**
-   ```bash
-   python -m vaas.main
-   ```
+# Run
+docker compose -f docker-compose.prod.yml up -d
+```
 
-6. **Access the application**
-   - Open http://localhost:5001 in your browser
-   - Default credentials: `admin` / `admin`
+**Or manual docker run:**
+```bash
+docker run -d \
+  --name vaas \
+  -p 5001:5001 \
+  -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
+  -v vaas-data:/app/data \
+  --restart unless-stopped \
+  ziadshalak/vaas:latest
+```
+
+Access at **http://localhost:5001** | Default login: `admin` / `admin`
+
+---
+
+### Option 2: Docker (Build from Source)
+
+Build the image locally from source code.
+
+```bash
+# Clone repository
+git clone https://github.com/ShalakZ/VAAS.git
+cd VAAS
+
+# Build and run
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+```
+
+Access at **http://localhost:5001** | Default login: `admin` / `admin`
+
+---
+
+### Option 3: Manual Installation
+
+Run directly with Python (no Docker).
+
+```bash
+# Clone repository
+git clone https://github.com/ShalakZ/VAAS.git
+cd VAAS
+
+# Set up Python environment
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+
+# Build frontend
+cd frontend
+npm install
+npm run build
+cd ..
+
+# Configure (optional)
+cp .env.example .env
+nano .env
+
+# Run
+python -m vaas.main
+```
+
+**For production, use Gunicorn:**
+```bash
+pip install gunicorn
+gunicorn --bind 0.0.0.0:5001 --workers 4 "vaas.main:create_app()"
+```
+
+Access at **http://localhost:5001** | Default login: `admin` / `admin`
+
+---
+
+### Option 4: Systemd Service (Linux)
+
+For running as a background service on Linux servers.
+
+**1. Create service file** `/etc/systemd/system/vaas.service`:
+```ini
+[Unit]
+Description=VAAS - Vulnerability Assignment Automation System
+After=network.target
+
+[Service]
+Type=simple
+User=vaas
+Group=vaas
+WorkingDirectory=/opt/vaas
+Environment="PATH=/opt/vaas/venv/bin"
+ExecStart=/opt/vaas/venv/bin/gunicorn --bind 0.0.0.0:5001 --workers 4 "vaas.main:create_app()"
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**2. Enable and start:**
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable vaas
+sudo systemctl start vaas
+
+# Check status
+sudo systemctl status vaas
+
+# View logs
+sudo journalctl -u vaas -f
+```
 
 ---
 
 ## Configuration
 
-VAAS supports configuration via environment variables. See `.env.example` for all options.
+### Environment Variables
 
-### Key Environment Variables
+Configure via `.env` file, environment variables, or `docker-compose.yml`.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `FLASK_SECRET_KEY` | Session encryption key | Random |
+| **Network** | | |
+| `VAAS_HOST` | IP address to bind to | `0.0.0.0` |
+| `VAAS_PORT` | Port to listen on | `5001` |
+| **Security** | | |
+| `FLASK_SECRET_KEY` | Session encryption key (required for production) | Random |
 | `FLASK_DEBUG` | Enable debug mode | `0` |
-| `DB_TYPE` | Database type (sqlite/postgresql/mysql/mssql) | `sqlite` |
+| **Database** | | |
+| `DB_TYPE` | Database type: `sqlite`, `postgresql`, `mysql`, `mssql` | `sqlite` |
 | `DB_HOST` | Database host | - |
 | `DB_PORT` | Database port | - |
 | `DB_NAME` | Database name | - |
 | `DB_USER` | Database username | - |
 | `DB_PASSWORD` | Database password | - |
-| `VAAS_THRESHOLD` | Fuzzy match confidence threshold | `0.85` |
-| `LDAP_ENABLED` | Enable LDAP authentication | `false` |
+| **Classification** | | |
+| `VAAS_THRESHOLD` | Fuzzy match confidence threshold (0.0 - 1.0) | `0.85` |
+| **LDAP** | | |
+| `LDAP_ENABLED` | Enable Active Directory authentication | `false` |
 | `LDAP_HOST` | LDAP server hostname | - |
+| `LDAP_PORT` | LDAP server port | `389` |
+| `LDAP_BASE_DN` | LDAP base DN (e.g., `DC=company,DC=com`) | - |
+| `LDAP_USER_FILTER` | User search filter | `(sAMAccountName={username})` |
+
+### Example Configurations
+
+**Custom port (8080):**
+```bash
+# Docker
+docker run -d -p 8080:5001 --name vaas ziadshalak/vaas:latest
+
+# Manual
+VAAS_PORT=8080 python -m vaas.main
+
+# Gunicorn
+gunicorn --bind 0.0.0.0:8080 --workers 4 "vaas.main:create_app()"
+```
+
+**Bind to specific IP:**
+```bash
+# Gunicorn
+gunicorn --bind 192.168.1.100:5001 --workers 4 "vaas.main:create_app()"
+```
+
+**With LDAP authentication:**
+```bash
+docker run -d \
+  --name vaas \
+  -p 5001:5001 \
+  -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
+  -e LDAP_ENABLED=true \
+  -e LDAP_HOST=ldap.company.com \
+  -e LDAP_BASE_DN=DC=company,DC=com \
+  -v vaas-data:/app/data \
+  ziadshalak/vaas:latest
+```
+
+### Post-Deployment Configuration
+
+After starting VAAS, configure additional settings via the web UI:
+
+1. **Login** with `admin` / `admin`
+2. **Settings → Users**: Change default password, add users
+3. **Settings → LDAP**: Configure Active Directory (if needed)
+4. **Settings → Database**: Switch to PostgreSQL/MySQL (if needed)
 
 ---
 
@@ -247,7 +296,7 @@ VAAS supports configuration via environment variables. See `.env.example` for al
 
 ### Classifying Vulnerabilities
 
-1. Navigate to `http://<server-ip>:5001`
+1. Navigate to `http://<server-ip>:<port>`
 2. Drag & drop your Excel report (or click "Select File")
    - Required column: `Title` (vulnerability name)
    - Recommended column: `Hostname` or `DNS Name` (for owner lookup)
@@ -297,14 +346,14 @@ VAAS supports configuration via environment variables. See `.env.example` for al
 
 ---
 
-## API Endpoints
+## API Reference
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/` | GET | Main React SPA |
+| `/health` | GET | Health check endpoint |
 | `/classify` | POST | Upload Excel, returns classified JSON |
 | `/export` | POST | Export classified data |
-| `/health` | GET | Health check endpoint |
 | `/kb/data` | GET | Get all KB rules |
 | `/kb/add_rule` | POST | Add hostname/title rule |
 | `/kb/edit_rule` | PUT | Edit existing rule |
@@ -315,68 +364,6 @@ VAAS supports configuration via environment variables. See `.env.example` for al
 | `/settings/users` | GET | User management (admin) |
 | `/settings/ldap` | GET | LDAP settings (admin) |
 | `/settings/database` | GET | Database settings (admin) |
-
----
-
-## Production Deployment
-
-### Option 1: Systemd Service
-
-Create `/etc/systemd/system/vaas.service`:
-
-```ini
-[Unit]
-Description=VAAS - Vulnerability Assignment Automation System
-After=network.target
-
-[Service]
-Type=simple
-User=vaas
-Group=vaas
-WorkingDirectory=/opt/vaas
-Environment="PATH=/opt/vaas/venv/bin"
-ExecStart=/opt/vaas/venv/bin/gunicorn --bind 0.0.0.0:5001 --workers 4 "vaas.main:create_app()"
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable vaas
-sudo systemctl start vaas
-```
-
-### Option 2: Docker (Recommended)
-
-```bash
-# Clone and navigate to project
-git clone https://github.com/ShalakZ/VAAS.git
-cd VAAS
-
-# Build and run with Docker Compose
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Stop
-docker compose down
-```
-
-Access the application at **http://localhost:5001**
-
-#### Docker Commands Reference
-
-| Command | Description |
-|---------|-------------|
-| `docker compose up -d` | Start in background |
-| `docker compose logs -f` | View live logs |
-| `docker compose down` | Stop containers |
-| `docker compose down -v` | Stop and remove data |
-| `docker compose build --no-cache` | Rebuild image |
 
 ---
 
@@ -400,25 +387,25 @@ FLASK_DEBUG=1 python -m vaas.main
 
 ## Troubleshooting
 
-### Q: Everything shows "Unclassified"
-**A:** Check Knowledge Base for missing patterns. Ensure title rules exist for your vulnerabilities.
+### Everything shows "Unclassified"
+Check Knowledge Base for missing patterns. Ensure title rules exist for your vulnerabilities.
 
-### Q: Service won't start
-**A:** Check logs: `sudo journalctl -u vaas -n 50`
+### Service won't start
+Check logs: `sudo journalctl -u vaas -n 50` or `docker compose logs`
+
 Common issues:
 - Missing dependencies: `pip install -r requirements.txt`
-- Permission issues: `chown -R vaas:vaas /opt/vaas`
 - Frontend not built: `cd frontend && npm run build`
+- Permission issues: `chown -R vaas:vaas /opt/vaas`
 
-### Q: Static assets not loading (404)
-**A:** Ensure frontend is built: `cd frontend && npm run build`
+### Static assets not loading (404)
+Ensure frontend is built: `cd frontend && npm run build`
 
-### Q: Port 5001 is already in use
-**A:**
+### Port already in use
 ```bash
 sudo lsof -i :5001  # Find the process
 sudo kill <PID>     # Kill it
-# Or set VAAS_PORT environment variable
+# Or use a different port via VAAS_PORT
 ```
 
 ---

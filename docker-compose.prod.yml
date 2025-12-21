@@ -1,0 +1,47 @@
+# VAAS Production Deployment
+#
+# Usage:
+#   1. Edit the configuration below
+#   2. Run: docker compose -f docker-compose.prod.yml up -d
+#
+# Default login: admin / admin (change after first login!)
+
+services:
+  vaas:
+    image: ziadshalak/vaas:1.0
+    container_name: vaas
+    restart: unless-stopped
+    ports:
+      # Change 5001 to your desired port (e.g., "8080:5001")
+      - "5001:5001"
+    environment:
+      # REQUIRED: Generate with: openssl rand -hex 32
+      - FLASK_SECRET_KEY=CHANGE_ME_GENERATE_A_RANDOM_KEY
+
+      # Classification threshold (0.0 - 1.0)
+      - VAAS_THRESHOLD=0.85
+
+      # LDAP/Active Directory (optional)
+      - LDAP_ENABLED=false
+      # - LDAP_HOST=ldap.company.com
+      # - LDAP_PORT=389
+      # - LDAP_BASE_DN=DC=company,DC=com
+      # - LDAP_USER_FILTER=(sAMAccountName={username})
+
+      # External Database (optional, defaults to SQLite)
+      # - DB_TYPE=postgresql
+      # - DB_HOST=localhost
+      # - DB_PORT=5432
+      # - DB_NAME=vaas
+      # - DB_USER=vaas_user
+      # - DB_PASSWORD=your_password
+    volumes:
+      - vaas-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  vaas-data:
