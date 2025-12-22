@@ -2,6 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// Backend port for API proxy (default: 5001)
+const backendPort = process.env.VITE_BACKEND_PORT || 5001
+const backendUrl = `http://localhost:${backendPort}`
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -20,16 +24,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:5001',
-      '/config': 'http://localhost:5001',
-      '/classify': 'http://localhost:5001',
-      '/export': 'http://localhost:5001',
-      '/submit_corrections': 'http://localhost:5001',
-      '/kb': 'http://localhost:5001',
-      '/settings': 'http://localhost:5001',
-      '/login': 'http://localhost:5001',
-      '/logout': 'http://localhost:5001',
-      '/static': 'http://localhost:5001',
+      '/api': backendUrl,
+      '/config': backendUrl,
+      '/classify': backendUrl,
+      '/export': backendUrl,
+      '/submit_corrections': backendUrl,
+      '/kb': backendUrl,
+      '/settings': backendUrl,
+      '/login': backendUrl,
+      '/logout': backendUrl,
+      '/static': backendUrl,
     }
   },
   build: {

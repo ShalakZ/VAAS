@@ -81,9 +81,9 @@ if [ "$DEV_MODE" = true ]; then
     FLASK_DEBUG=1 VAAS_PORT=$PORT python3 -m vaas.main &
     FLASK_PID=$!
 
-    # Start Vite dev server
+    # Start Vite dev server (pass backend port for proxy)
     cd frontend
-    npm run dev &
+    VITE_BACKEND_PORT=$PORT npm run dev &
     VITE_PID=$!
     cd ..
 
