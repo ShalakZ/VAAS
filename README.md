@@ -7,6 +7,7 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 ## Table of Contents
 
 - [Features](#features)
+- [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
 - [Deployment Options](#deployment-options)
   - [Option 1: Docker Hub (Quick Deploy)](#option-1-docker-hub-quick-deploy)
@@ -36,6 +37,36 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 - **Bulk Processing**: Handles large datasets (1000+ rows) efficiently
 - **Export Options**: Download full classified report or separate per-team Excel files (zipped)
 - **Dark Mode**: Toggle between light and dark themes
+
+---
+
+## Quick Start
+
+### One-Command Setup (Recommended)
+
+```bash
+git clone https://github.com/ShalakZ/VAAS.git
+cd VAAS
+./setup.sh
+./run.sh
+```
+
+Then open **http://localhost:5001** | Login: `admin` / `admin`
+
+### What the scripts do:
+
+| Script | Purpose |
+|--------|---------|
+| `./setup.sh` | Creates venv, installs dependencies, configures database, builds frontend |
+| `./run.sh` | Starts the VAAS server |
+| `./run.sh --dev` | Development mode with hot reload (frontend on :5173) |
+| `./run.sh --port 8080` | Use custom port |
+
+### Docker Alternative
+
+```bash
+docker run -d -p 5001:5001 --name vaas ziadshalak/vaas:latest
+```
 
 ---
 
