@@ -65,8 +65,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Activate virtual environment
-source venv/bin/activate
+# Activate virtual environment (handle Windows vs Linux)
+if [ -f "venv/Scripts/activate" ]; then
+    source venv/Scripts/activate
+    VENV_PYTHON="venv/Scripts/python"
+else
+    source venv/bin/activate
+    VENV_PYTHON="venv/bin/python3"
+fi
 
 if [ "$DEV_MODE" = true ]; then
     echo -e "${BLUE}Starting VAAS in development mode...${NC}"
@@ -78,7 +84,7 @@ if [ "$DEV_MODE" = true ]; then
     echo ""
 
     # Start Flask in background
-    FLASK_DEBUG=1 VAAS_PORT=$PORT python3 -m vaas.main &
+    FLASK_DEBUG=1 VAAS_PORT=$PORT $VENV_PYTHON -m vaas.main &
     FLASK_PID=$!
 
     # Start Vite dev server (pass backend port for proxy)
@@ -102,5 +108,5 @@ else
     echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
     echo ""
 
-    VAAS_PORT=$PORT python3 -m vaas.main
+    VAAS_PORT=$PORT $VENV_PYTHON -m vaas.main
 fi

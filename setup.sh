@@ -26,14 +26,17 @@ cd "$SCRIPT_DIR"
 
 echo -e "${YELLOW}[1/5]${NC} Checking prerequisites..."
 
-# Check Python
+# Check Python (try python3 first, then python)
 if command -v python3 &> /dev/null; then
-    PYTHON_VERSION=$(python3 --version 2>&1 | cut -d' ' -f2)
-    echo -e "  ${GREEN}✓${NC} Python $PYTHON_VERSION found"
+    PYTHON_CMD=python3
+elif command -v python &> /dev/null; then
+    PYTHON_CMD=python
 else
-    echo -e "  ${RED}✗${NC} Python 3 not found. Please install Python 3.10+"
+    echo -e "  ${RED}✗${NC} Python not found. Please install Python 3.10+"
     exit 1
 fi
+PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | cut -d' ' -f2)
+echo -e "  ${GREEN}✓${NC} Python $PYTHON_VERSION found"
 
 # Check Node.js
 if command -v node &> /dev/null; then
@@ -58,12 +61,18 @@ echo -e "${YELLOW}[2/5]${NC} Setting up Python virtual environment..."
 if [ -d "venv" ]; then
     echo -e "  ${BLUE}→${NC} Virtual environment already exists"
 else
-    python3 -m venv venv
+    $PYTHON_CMD -m venv venv
     echo -e "  ${GREEN}✓${NC} Created virtual environment"
 fi
 
-# Activate venv and install dependencies
-source venv/bin/activate
+# Activate venv and install dependencies (handle Windows vs Linux)
+if [ -f "venv/Scripts/activate" ]; then
+    source venv/Scripts/activate
+    VENV_PYTHON="venv/Scripts/python"
+else
+    source venv/bin/activate
+    VENV_PYTHON="venv/bin/python3"
+fi
 echo -e "  ${BLUE}→${NC} Installing Python dependencies..."
 pip install --upgrade pip -q
 pip install -r requirements.txt -q
@@ -74,7 +83,7 @@ echo -e "${YELLOW}[3/5]${NC} Setting up configuration files..."
 # Create config files from examples if they don't exist
 if [ ! -f "data/database_settings.json" ]; then
     # Use Python to create config with correct absolute path
-    venv/bin/python3 << EOF
+    $VENV_PYTHON << EOF
 import json
 import os
 
@@ -131,7 +140,7 @@ cd ..
 echo -e "${YELLOW}[5/5]${NC} Verifying setup..."
 
 # Quick check that the app can import without errors
-if venv/bin/python3 -c "from vaas.main import create_app; app = create_app()" 2>/dev/null; then
+if $VENV_PYTHON -c "from vaas.main import create_app; app = create_app()" 2>/dev/null; then
     echo -e "  ${GREEN}✓${NC} Application verified"
 else
     echo -e "  ${YELLOW}!${NC} Could not verify app (this is okay for first run)"
