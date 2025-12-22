@@ -44,12 +44,22 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 
 ### One-Command Setup (Recommended)
 
+**Linux/Mac:**
 ```bash
 git clone https://github.com/ShalakZ/VAAS.git
 cd VAAS
 ./setup.sh
 ./run.sh
 ```
+
+**Windows (using Git Bash):**
+```bash
+git clone https://github.com/ShalakZ/VAAS.git
+cd VAAS
+./setup.sh
+./run.sh
+```
+> Right-click in folder → "Git Bash Here" to open Git Bash
 
 Then open **http://localhost:5001** | Login: `admin` / `admin`
 
@@ -409,9 +419,24 @@ npm run lint   # Run ESLint
 ```
 
 ### Backend Development
+
+**Linux/Mac:**
 ```bash
 source venv/bin/activate
 FLASK_DEBUG=1 python -m vaas.main
+```
+
+**Windows (Git Bash):**
+```bash
+source venv/Scripts/activate
+FLASK_DEBUG=1 python -m vaas.main
+```
+
+**Windows (CMD):**
+```cmd
+venv\Scripts\activate
+set FLASK_DEBUG=1
+python -m vaas.main
 ```
 
 ---
