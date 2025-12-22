@@ -141,8 +141,10 @@ if __name__ == '__main__':
     # Enable debug logging for auth
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logging.getLogger('vaas.auth').setLevel(logging.DEBUG)
-    
+
     app = create_app()
     logger.info("Starting VAAS Modular App...")
     debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
-    app.run(debug=True, port=5001, host='0.0.0.0')
+    port = int(os.environ.get('VAAS_PORT', 5001))
+    host = os.environ.get('VAAS_HOST', '0.0.0.0')
+    app.run(debug=debug_mode, port=port, host=host)
