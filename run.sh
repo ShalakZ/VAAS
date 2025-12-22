@@ -84,12 +84,15 @@ if [ "$DEV_MODE" = true ]; then
     echo ""
 
     # Start Flask in background
-    FLASK_DEBUG=1 VAAS_PORT=$PORT $VENV_PYTHON -m vaas.main &
+    export FLASK_DEBUG=1
+    export VAAS_PORT=$PORT
+    $VENV_PYTHON -m vaas.main &
     FLASK_PID=$!
 
     # Start Vite dev server (pass backend port for proxy)
     cd frontend
-    VITE_BACKEND_PORT=$PORT npm run dev &
+    export VITE_BACKEND_PORT=$PORT
+    npm run dev &
     VITE_PID=$!
     cd ..
 
@@ -108,5 +111,6 @@ else
     echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
     echo ""
 
-    VAAS_PORT=$PORT $VENV_PYTHON -m vaas.main
+    export VAAS_PORT=$PORT
+    $VENV_PYTHON -m vaas.main
 fi
