@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// Backend port for API proxy (default: 5001)
-const backendPort = process.env.VITE_BACKEND_PORT || 5001
+// Backend port for API proxy (default: 8085)
+const backendPort = process.env.VITE_BACKEND_PORT || 8085
 const backendUrl = `http://localhost:${backendPort}`
 
 // https://vite.dev/config/

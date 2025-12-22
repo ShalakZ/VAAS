@@ -35,7 +35,7 @@ class Config:
 
     # Server settings
     HOST = os.environ.get('VAAS_HOST', '0.0.0.0')
-    PORT = int(os.environ.get('VAAS_PORT', 5001))
+    PORT = int(os.environ.get('VAAS_PORT', 8085))
 
     @staticmethod
     def get_teams_list():

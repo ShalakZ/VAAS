@@ -61,7 +61,7 @@ cd VAAS
 ```
 > Right-click in folder → "Git Bash Here" to open Git Bash
 
-Then open **http://localhost:5001** | Login: `admin` / `admin`
+Then open **http://localhost:8085** | Login: `admin` / `admin`
 
 ### What the scripts do:
 
@@ -75,7 +75,7 @@ Then open **http://localhost:5001** | Login: `admin` / `admin`
 ### Docker Alternative
 
 ```bash
-docker run -d -p 5001:5001 --name vaas ziadshalak/vaas:latest
+docker run -d -p 8085:8085 --name vaas ziadshalak/vaas:latest
 ```
 
 ---
@@ -147,14 +147,14 @@ docker compose -f docker-compose.prod.yml up -d
 ```bash
 docker run -d \
   --name vaas \
-  -p 5001:5001 \
+  -p 8085:8085 \
   -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
   -v vaas-data:/app/data \
   --restart unless-stopped \
   ziadshalak/vaas:latest
 ```
 
-Access at **http://localhost:5001** | Default login: `admin` / `admin`
+Access at **http://localhost:8085** | Default login: `admin` / `admin`
 
 ---
 
@@ -177,7 +177,7 @@ docker compose logs -f
 docker compose down
 ```
 
-Access at **http://localhost:5001** | Default login: `admin` / `admin`
+Access at **http://localhost:8085** | Default login: `admin` / `admin`
 
 ---
 
@@ -213,10 +213,10 @@ python -m vaas.main
 **For production, use Gunicorn:**
 ```bash
 pip install gunicorn
-gunicorn --bind 0.0.0.0:5001 --workers 4 "vaas.main:create_app()"
+gunicorn --bind 0.0.0.0:8085 --workers 4 "vaas.main:create_app()"
 ```
 
-Access at **http://localhost:5001** | Default login: `admin` / `admin`
+Access at **http://localhost:8085** | Default login: `admin` / `admin`
 
 ---
 
@@ -236,7 +236,7 @@ User=vaas
 Group=vaas
 WorkingDirectory=/opt/vaas
 Environment="PATH=/opt/vaas/venv/bin"
-ExecStart=/opt/vaas/venv/bin/gunicorn --bind 0.0.0.0:5001 --workers 4 "vaas.main:create_app()"
+ExecStart=/opt/vaas/venv/bin/gunicorn --bind 0.0.0.0:8085 --workers 4 "vaas.main:create_app()"
 Restart=always
 RestartSec=10
 
@@ -269,7 +269,7 @@ Configure via `.env` file, environment variables, or `docker-compose.yml`.
 |----------|-------------|---------|
 | **Network** | | |
 | `VAAS_HOST` | IP address to bind to | `0.0.0.0` |
-| `VAAS_PORT` | Port to listen on | `5001` |
+| `VAAS_PORT` | Port to listen on | `8085` |
 | **Security** | | |
 | `FLASK_SECRET_KEY` | Session encryption key (required for production) | Random |
 | `FLASK_DEBUG` | Enable debug mode | `0` |
@@ -294,7 +294,7 @@ Configure via `.env` file, environment variables, or `docker-compose.yml`.
 **Custom port (8080):**
 ```bash
 # Docker
-docker run -d -p 8080:5001 --name vaas ziadshalak/vaas:latest
+docker run -d -p 8080:8085 --name vaas ziadshalak/vaas:latest
 
 # Manual
 VAAS_PORT=8080 python -m vaas.main
@@ -306,14 +306,14 @@ gunicorn --bind 0.0.0.0:8080 --workers 4 "vaas.main:create_app()"
 **Bind to specific IP:**
 ```bash
 # Gunicorn
-gunicorn --bind 192.168.1.100:5001 --workers 4 "vaas.main:create_app()"
+gunicorn --bind 192.168.1.100:8085 --workers 4 "vaas.main:create_app()"
 ```
 
 **With LDAP authentication:**
 ```bash
 docker run -d \
   --name vaas \
-  -p 5001:5001 \
+  -p 8085:8085 \
   -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
   -e LDAP_ENABLED=true \
   -e LDAP_HOST=ldap.company.com \
@@ -459,7 +459,7 @@ Ensure frontend is built: `cd frontend && npm run build`
 
 ### Port already in use
 ```bash
-sudo lsof -i :5001  # Find the process
+sudo lsof -i :8085  # Find the process
 sudo kill <PID>     # Kill it
 # Or use a different port via VAAS_PORT
 ```

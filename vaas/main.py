@@ -145,6 +145,6 @@ if __name__ == '__main__':
     app = create_app()
     logger.info("Starting VAAS Modular App...")
     debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
-    port = int(os.environ.get('VAAS_PORT', 5001))
+    port = int(os.environ.get('VAAS_PORT', 8085))
     host = os.environ.get('VAAS_HOST', '0.0.0.0')
     app.run(debug=debug_mode, port=port, host=host)

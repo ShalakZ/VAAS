@@ -71,13 +71,13 @@ USER vaas
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Expose port
-EXPOSE 5001
+EXPOSE 8085
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5001/health || exit 1
+    CMD curl -f http://localhost:8085/health || exit 1
 
 # Run with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "2", "--threads", "4", \
+CMD ["gunicorn", "--bind", "0.0.0.0:8085", "--workers", "2", "--threads", "4", \
      "--access-logfile", "-", "--error-logfile", "-", \
      "vaas.main:create_app()"]

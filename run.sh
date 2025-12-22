@@ -30,7 +30,7 @@ fi
 
 # Parse arguments
 DEV_MODE=false
-PORT=${VAAS_PORT:-5001}
+PORT=${VAAS_PORT:-8085}
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -49,11 +49,11 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --dev       Run in development mode (Flask debug + Vite HMR)"
-            echo "  --port N    Use custom port (default: 5001)"
+            echo "  --port N    Use custom port (default: 8085)"
             echo "  -h, --help  Show this help message"
             echo ""
             echo "Examples:"
-            echo "  ./run.sh              # Production mode on port 5001"
+            echo "  ./run.sh              # Production mode on port 8085"
             echo "  ./run.sh --dev        # Development mode with hot reload"
             echo "  ./run.sh --port 8080  # Custom port"
             exit 0

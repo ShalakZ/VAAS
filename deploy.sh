@@ -10,8 +10,8 @@ echo "============================================"
 echo ""
 
 # Get port
-read -p "Enter port to run on [5001]: " PORT
-PORT=${PORT:-5001}
+read -p "Enter port to run on [8085]: " PORT
+PORT=${PORT:-8085}
 
 # Generate secret key
 SECRET_KEY=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p)
@@ -30,7 +30,7 @@ echo ""
 echo "Starting VAAS on port $PORT..."
 docker run -d \
   --name vaas \
-  -p ${PORT}:5001 \
+  -p ${PORT}:8085 \
   -e FLASK_SECRET_KEY=${SECRET_KEY} \
   -e VAAS_THRESHOLD=0.85 \
   -v vaas-data:/app/data \
