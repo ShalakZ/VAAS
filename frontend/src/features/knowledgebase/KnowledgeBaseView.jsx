@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Input, Select, Button } from '../../components/common';
+import { useToast } from '../../context';
 
 export function KnowledgeBaseView({
   kbData,
@@ -7,9 +8,11 @@ export function KnowledgeBaseView({
   onAddRule,
   onEditRule,
   onDeleteRule,
+  onConfirmDelete,
   teamsList,
   canModifyKb,
 }) {
+  const toast = useToast();
   const [kbTab, setKbTab] = useState('hostnames');
   const [kbSearch, setKbSearch] = useState('');
   const [newRule, setNewRule] = useState({ key: '', team: '' });
@@ -27,7 +30,7 @@ export function KnowledgeBaseView({
 
   const handleAddRule = async () => {
     if (!newRule.key || !newRule.team) {
-      alert('Please fill all fields');
+      toast.warning('Please fill all fields');
       return;
     }
 
@@ -40,7 +43,7 @@ export function KnowledgeBaseView({
 
   const handleEditRule = async () => {
     if (!editingItem || !editingItem.key || !editingItem.team) {
-      alert('Please fill all fields');
+      toast.warning('Please fill all fields');
       return;
     }
 
@@ -51,10 +54,14 @@ export function KnowledgeBaseView({
     }
   };
 
-  const handleDeleteRule = async (key) => {
-    if (!confirm(`Are you sure you want to delete this rule?\n\n${key}`)) return;
+  const handleDeleteRule = (key) => {
     const type = kbTab === 'hostnames' ? 'hostname' : 'title';
-    await onDeleteRule(type, key);
+    if (onConfirmDelete) {
+      onConfirmDelete(type, key);
+    } else {
+      // Fallback if no confirm handler provided
+      onDeleteRule(type, key);
+    }
   };
 
   const startEditing = (item) => {
@@ -97,10 +104,11 @@ export function KnowledgeBaseView({
       {canModifyKb && (
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded mb-6 mx-4 flex gap-4 items-end border dark:border-blue-900/50">
           <div className="flex-1">
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="new-rule-key" className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
               {kbTab === 'hostnames' ? 'New Hostname' : 'New Title Pattern'}
             </label>
             <Input
+              id="new-rule-key"
               placeholder={kbTab === 'hostnames' ? 'e.g. server-db-01' : 'e.g. SQL Injection'}
               value={newRule.key}
               onChange={e => setNewRule({ ...newRule, key: e.target.value })}
@@ -108,10 +116,11 @@ export function KnowledgeBaseView({
             />
           </div>
           <div className="w-64">
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="new-rule-team" className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
               Assign To Team
             </label>
             <Select
+              id="new-rule-team"
               options={teamsList}
               value={newRule.team}
               onChange={e => setNewRule({ ...newRule, team: e.target.value })}
@@ -183,33 +192,37 @@ export function KnowledgeBaseView({
                   <td className="p-3 text-right pr-8">
                     {isEditing ? (
                       <div className="flex gap-2 justify-end">
-                        <button
+                        <Button
                           onClick={handleEditRule}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                          variant="success"
+                          size="sm"
                         >
                           Save
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => setEditingItem(null)}
-                          className="px-3 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500"
+                          variant="secondary"
+                          size="sm"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     ) : canModifyKb ? (
                       <div className="flex gap-2 justify-end">
-                        <button
+                        <Button
                           onClick={() => startEditing(item)}
-                          className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                          variant="primary"
+                          size="sm"
                         >
                           Edit
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => handleDeleteRule(itemKey)}
-                          className="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
+                          variant="danger"
+                          size="sm"
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400 whitespace-nowrap">View Only</span>

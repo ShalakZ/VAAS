@@ -7,7 +7,7 @@ export function StatsBar({ stats, filter, setFilter, currentPage, totalPages }) 
   ];
 
   return (
-    <div className="flex gap-4 text-sm">
+    <div className="flex gap-4 text-sm" role="group" aria-label="Filter results by category">
       {filterButtons.map(({ key, label, count, colors, inactiveColors }) => (
         <button
           key={key}
@@ -15,11 +15,12 @@ export function StatsBar({ stats, filter, setFilter, currentPage, totalPages }) 
           className={`px-3 py-1 rounded-full font-medium transition ${
             filter === key ? colors : inactiveColors
           }`}
+          aria-pressed={filter === key}
         >
-          {label}: {count}
+          {label}: <span aria-live="polite">{count}</span>
         </button>
       ))}
-      <span className="ml-4 text-gray-500 dark:text-gray-400 border-l dark:border-gray-600 pl-4 self-center">
+      <span className="ml-4 text-gray-500 dark:text-gray-400 border-l dark:border-gray-600 pl-4 self-center" aria-live="polite">
         Page {currentPage} of {totalPages || 1}
       </span>
     </div>

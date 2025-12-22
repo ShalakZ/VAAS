@@ -24,18 +24,22 @@ export function Sidebar({
 
       {/* Sidebar */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sidebar-title"
         className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-r border-gray-200 dark:border-gray-700 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-6 flex flex-col h-full">
           <div className="flex justify-between items-center mb-6 border-b dark:border-gray-700 pb-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Menu</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white" id="sidebar-title">Menu</h2>
             <button
               onClick={onClose}
               className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg w-8 h-8 flex items-center justify-center"
+              aria-label="Close navigation menu"
             >
-              ×
+              <span aria-hidden="true">×</span>
             </button>
           </div>
 

@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { WorkflowSteps } from '../common';
 
 export function Header({
   view,
@@ -12,15 +13,17 @@ export function Header({
   onKbClick,
 }) {
   return (
-    <header className="mb-8 flex justify-between items-center">
-      <div className="flex items-center gap-3">
+    <header className="mb-8 flex flex-col gap-4">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-3">
         {/* Hamburger Menu Button */}
         <button
           onClick={onSidebarOpen}
           className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           title="Open Menu"
+          aria-label="Open navigation menu"
         >
-          <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
@@ -74,14 +77,24 @@ export function Header({
           onClick={toggleTheme}
           className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-2"
           title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          aria-pressed={theme === 'dark'}
         >
           {theme === 'dark' ? (
-            <span className="text-yellow-400 text-xl">☀️</span>
+            <span className="text-yellow-400 text-xl" aria-hidden="true">☀️</span>
           ) : (
-            <span className="text-gray-600 text-xl">🌙</span>
+            <span className="text-gray-600 text-xl" aria-hidden="true">🌙</span>
           )}
         </button>
+        </div>
       </div>
+
+      {/* Workflow Steps - only show for upload/review views */}
+      {(view === 'upload' || view === 'review') && (
+        <div className="flex justify-center">
+          <WorkflowSteps currentStep={view} hasData={hasData} />
+        </div>
+      )}
     </header>
   );
 }
