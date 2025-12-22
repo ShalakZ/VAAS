@@ -83,25 +83,27 @@ echo -e "${YELLOW}[3/5]${NC} Setting up configuration files..."
 # Create config files from examples if they don't exist
 if [ ! -f "data/database_settings.json" ]; then
     # Use Python to create config with correct absolute path
-    $VENV_PYTHON << EOF
+    $VENV_PYTHON << 'PYEOF'
 import json
 import os
 
-script_dir = "$SCRIPT_DIR"
-example_file = os.path.join(script_dir, "data/database_settings.json.example")
-output_file = os.path.join(script_dir, "data/database_settings.json")
+# Get paths relative to current working directory (works on both Windows and Linux)
+script_dir = os.getcwd()
+example_file = os.path.join(script_dir, "data", "database_settings.json.example")
+output_file = os.path.join(script_dir, "data", "database_settings.json")
 
 with open(example_file, 'r') as f:
     config = json.load(f)
 
-# Set absolute path for SQLite file
-config['SQLITE_FILE'] = os.path.join(script_dir, "data/knowledge_base.db")
+# Set absolute path for SQLite file (use forward slashes for cross-platform compatibility)
+sqlite_path = os.path.join(script_dir, "data", "knowledge_base.db")
+config['SQLITE_FILE'] = sqlite_path.replace('\\', '/')
 
 with open(output_file, 'w') as f:
     json.dump(config, f, indent=2)
 
 print("  Created with SQLITE_FILE:", config['SQLITE_FILE'])
-EOF
+PYEOF
     echo -e "  ${GREEN}✓${NC} Created data/database_settings.json"
 else
     echo -e "  ${BLUE}→${NC} data/database_settings.json already exists"
