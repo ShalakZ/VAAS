@@ -68,9 +68,9 @@ Then open **http://localhost:8085** | Login: `admin` / `admin`
 | Script | Purpose |
 |--------|---------|
 | `./setup.sh` | Creates venv, installs dependencies, configures database, builds frontend |
-| `./run.sh` | Starts the VAAS server |
+| `./run.sh` | Starts the VAAS server on **port 8085** (default) |
 | `./run.sh --dev` | Development mode with hot reload (frontend on :5173) |
-| `./run.sh --port 8080` | Use custom port |
+| `./run.sh --port 9000` | Use custom port (e.g., 9000) |
 
 ### Docker Alternative
 
