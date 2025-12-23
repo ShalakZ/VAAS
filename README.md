@@ -75,7 +75,7 @@ Then open **http://localhost:8085** | Login: `admin` / `admin`
 ### Docker Alternative
 
 ```bash
-docker run -d -p 8085:8085 --name vaas ziadshalak/vaas:latest
+docker run -d -p 8085:8085 --name vaas ziadshalak/vaas:1.1
 ```
 
 ---
@@ -151,7 +151,7 @@ docker run -d \
   -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
   -v vaas-data:/app/data \
   --restart unless-stopped \
-  ziadshalak/vaas:latest
+  ziadshalak/vaas:1.1
 ```
 
 Access at **http://localhost:8085** | Default login: `admin` / `admin`
@@ -294,7 +294,7 @@ Configure via `.env` file, environment variables, or `docker-compose.yml`.
 **Custom port (8080):**
 ```bash
 # Docker
-docker run -d -p 8080:8085 --name vaas ziadshalak/vaas:latest
+docker run -d -p 8080:8085 --name vaas ziadshalak/vaas:1.1
 
 # Manual
 VAAS_PORT=8080 python -m vaas.main
@@ -319,7 +319,7 @@ docker run -d \
   -e LDAP_HOST=ldap.company.com \
   -e LDAP_BASE_DN=DC=company,DC=com \
   -v vaas-data:/app/data \
-  ziadshalak/vaas:latest
+  ziadshalak/vaas:1.1
 ```
 
 ### Post-Deployment Configuration

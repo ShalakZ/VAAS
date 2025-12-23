@@ -98,17 +98,21 @@ export function Sidebar({
 
             <hr className="border-gray-200 dark:border-gray-700 my-4" />
             <div className="flex items-center justify-between px-4 py-2">
-              <span className="text-gray-700 dark:text-gray-200 font-medium">Dark Mode</span>
+              <span id="dark-mode-label" className="text-gray-700 dark:text-gray-200 font-medium">Dark Mode</span>
               <button
                 onClick={toggleTheme}
                 className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
                   theme === 'dark' ? 'bg-blue-600' : 'bg-gray-300'
                 }`}
+                role="switch"
+                aria-checked={theme === 'dark'}
+                aria-labelledby="dark-mode-label"
               >
                 <div
                   className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${
                     theme === 'dark' ? 'translate-x-6' : ''
                   }`}
+                  aria-hidden="true"
                 />
               </button>
             </div>

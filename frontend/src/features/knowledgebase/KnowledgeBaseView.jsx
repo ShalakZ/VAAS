@@ -17,6 +17,7 @@ export function KnowledgeBaseView({
   const [kbSearch, setKbSearch] = useState('');
   const [newRule, setNewRule] = useState({ key: '', team: '' });
   const [editingItem, setEditingItem] = useState(null);
+  const [formErrors, setFormErrors] = useState({ key: '', team: '' });
 
   const filteredKbList = useMemo(() => {
     const list = kbTab === 'hostnames' ? kbData.hostnames : kbData.titles;
@@ -28,9 +29,34 @@ export function KnowledgeBaseView({
     });
   }, [kbData, kbTab, kbSearch]);
 
+  const validateForm = () => {
+    const errors = { key: '', team: '' };
+    let isValid = true;
+
+    if (!newRule.key.trim()) {
+      errors.key = kbTab === 'hostnames' ? 'Hostname is required' : 'Title pattern is required';
+      isValid = false;
+    }
+
+    if (!newRule.team) {
+      errors.team = 'Please select a team';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  const handleInputChange = (field, value) => {
+    setNewRule({ ...newRule, [field]: value });
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors({ ...formErrors, [field]: '' });
+    }
+  };
+
   const handleAddRule = async () => {
-    if (!newRule.key || !newRule.team) {
-      toast.warning('Please fill all fields');
+    if (!validateForm()) {
       return;
     }
 
@@ -38,6 +64,7 @@ export function KnowledgeBaseView({
     const success = await onAddRule(type, newRule.key, newRule.team);
     if (success) {
       setNewRule({ key: '', team: '' });
+      setFormErrors({ key: '', team: '' });
     }
   };
 
@@ -111,9 +138,16 @@ export function KnowledgeBaseView({
               id="new-rule-key"
               placeholder={kbTab === 'hostnames' ? 'e.g. server-db-01' : 'e.g. SQL Injection'}
               value={newRule.key}
-              onChange={e => setNewRule({ ...newRule, key: e.target.value })}
-              className="w-full"
+              onChange={e => handleInputChange('key', e.target.value)}
+              className={`w-full ${formErrors.key ? 'border-red-500 dark:border-red-500 focus:ring-red-500' : ''}`}
+              aria-invalid={!!formErrors.key}
+              aria-describedby={formErrors.key ? 'new-rule-key-error' : undefined}
             />
+            {formErrors.key && (
+              <p id="new-rule-key-error" className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+                {formErrors.key}
+              </p>
+            )}
           </div>
           <div className="w-64">
             <label htmlFor="new-rule-team" className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
@@ -123,10 +157,17 @@ export function KnowledgeBaseView({
               id="new-rule-team"
               options={teamsList}
               value={newRule.team}
-              onChange={e => setNewRule({ ...newRule, team: e.target.value })}
+              onChange={e => handleInputChange('team', e.target.value)}
               placeholder="Select Team..."
-              className="w-full"
+              className={`w-full ${formErrors.team ? 'border-red-500 dark:border-red-500' : ''}`}
+              aria-invalid={!!formErrors.team}
+              aria-describedby={formErrors.team ? 'new-rule-team-error' : undefined}
             />
+            {formErrors.team && (
+              <p id="new-rule-team-error" className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+                {formErrors.team}
+              </p>
+            )}
           </div>
           <Button onClick={handleAddRule} variant="primary">
             Add Rule +
