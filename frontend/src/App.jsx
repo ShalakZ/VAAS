@@ -373,6 +373,8 @@ function AppContent() {
       if (result.success) {
         toast.success('Rule Added! (Note: Restart app to apply to new uploads)');
         fetchKbData();
+        // Refresh teams dropdown in case a new team was added
+        await refreshTeams();
         return true;
       } else {
         toast.error(result.message);
@@ -382,7 +384,7 @@ function AppContent() {
       toast.error(err.message);
       return false;
     }
-  }, [fetchKbData, toast]);
+  }, [fetchKbData, toast, refreshTeams]);
 
   const handleEditRule = useCallback(async (type, oldKey, newKey, newTeam) => {
     try {
@@ -390,6 +392,8 @@ function AppContent() {
       if (result.success) {
         toast.success('Rule Updated!');
         fetchKbData();
+        // Refresh teams dropdown in case team was changed
+        await refreshTeams();
         return true;
       } else {
         toast.error(result.message);
@@ -399,7 +403,7 @@ function AppContent() {
       toast.error(err.message);
       return false;
     }
-  }, [fetchKbData, toast]);
+  }, [fetchKbData, toast, refreshTeams]);
 
   // Execute delete rule (called after user confirms)
   const executeDeleteRule = useCallback(async (type, key) => {
@@ -409,13 +413,15 @@ function AppContent() {
       if (result.success) {
         toast.success('Rule Deleted!');
         fetchKbData();
+        // Refresh teams dropdown in case a team was removed
+        await refreshTeams();
       } else {
         toast.error(result.message);
       }
     } catch (err) {
       toast.error(err.message);
     }
-  }, [fetchKbData, toast]);
+  }, [fetchKbData, toast, refreshTeams]);
 
   // Delete rule handler (direct execution without confirm modal)
   const handleDeleteRule = useCallback(async (type, key) => {
