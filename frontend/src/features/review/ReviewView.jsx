@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useDebounce } from '../../hooks';
 import { StatsBar } from './StatsBar';
 import { DataTable } from './DataTable';
 import { Pagination } from './Pagination';
@@ -23,10 +22,10 @@ export function ReviewView({
   // Filter State
   const [filter, setFilter] = useState('all');
   const [columnFilters, setColumnFilters] = useState({
-    hostname: '',
-    Title: '',
-    Assigned_Team: '',
-    Reason: '',
+    hostname: null,      // Set of selected values or null for all
+    Title: null,
+    Assigned_Team: null,
+    Reason: null,
   });
 
   // Sorting State
@@ -39,16 +38,13 @@ export function ReviewView({
   // Modal State
   const [selectedRow, setSelectedRow] = useState(null);
 
-  // Debounced filters
-  const debouncedFilters = useDebounce(columnFilters, 300);
-
   // Reset page on filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, debouncedFilters, sortConfig, itemsPerPage]);
+  }, [filter, columnFilters, sortConfig, itemsPerPage]);
 
-  // Processed Data with filtering and sorting
-  const processedData = useMemo(() => {
+  // High-level filtered data (before column filters) - for getting unique values
+  const highLevelFilteredData = useMemo(() => {
     let items = [...data];
 
     // High Level Filter
@@ -60,13 +56,20 @@ export function ReviewView({
       items = items.filter(item => item.Method === 'Fuzzy');
     }
 
-    // Column Filters
-    Object.keys(debouncedFilters).forEach(key => {
-      const filterValue = debouncedFilters[key].toLowerCase();
-      if (filterValue) {
+    return items;
+  }, [data, filter]);
+
+  // Processed Data with column filtering and sorting
+  const processedData = useMemo(() => {
+    let items = [...highLevelFilteredData];
+
+    // Column Filters (Set-based)
+    Object.keys(columnFilters).forEach(key => {
+      const filterSet = columnFilters[key];
+      if (filterSet && filterSet.size > 0) {
         items = items.filter(item => {
-          const itemValue = String(item[key] || '').toLowerCase();
-          return itemValue.includes(filterValue);
+          const itemValue = item[key] ?? '(Blank)';
+          return filterSet.has(itemValue);
         });
       }
     });
@@ -87,7 +90,7 @@ export function ReviewView({
     }
 
     return items;
-  }, [data, sortConfig, filter, debouncedFilters]);
+  }, [highLevelFilteredData, sortConfig, columnFilters]);
 
   // Pagination
   const totalPages = Math.ceil(processedData.length / itemsPerPage);
@@ -96,23 +99,30 @@ export function ReviewView({
     return processedData.slice(start, start + itemsPerPage);
   }, [processedData, currentPage, itemsPerPage]);
 
-  const handleSort = (key) => {
-    // Cycle through: ascending -> descending -> none (reset)
-    if (sortConfig.key === key) {
-      if (sortConfig.direction === 'ascending') {
-        setSortConfig({ key, direction: 'descending' });
-      } else {
-        // Was descending, now reset to no sort
-        setSortConfig({ key: null, direction: 'ascending' });
-      }
+  // Sort handler - can be called from header click or dropdown
+  const handleSort = (key, direction) => {
+    if (direction) {
+      // Called from dropdown with explicit direction
+      setSortConfig({ key, direction });
     } else {
-      // New column, start with ascending
-      setSortConfig({ key, direction: 'ascending' });
+      // Called from header click - cycle through states
+      if (sortConfig.key === key) {
+        if (sortConfig.direction === 'ascending') {
+          setSortConfig({ key, direction: 'descending' });
+        } else {
+          // Was descending, now reset to no sort
+          setSortConfig({ key: null, direction: 'ascending' });
+        }
+      } else {
+        // New column, start with ascending
+        setSortConfig({ key, direction: 'ascending' });
+      }
     }
   };
 
-  const handleFilterChange = (key, value) => {
-    setColumnFilters(prev => ({ ...prev, [key]: value }));
+  // Filter apply handler - receives Set of selected values
+  const handleFilterApply = (key, selectedValues) => {
+    setColumnFilters(prev => ({ ...prev, [key]: selectedValues }));
   };
 
   const handleRowTeamChange = (row, newTeam) => {
@@ -180,10 +190,11 @@ export function ReviewView({
       <div className="overflow-auto flex-1">
         <DataTable
           data={paginatedData}
+          allData={highLevelFilteredData}
           sortConfig={sortConfig}
           onSort={handleSort}
           columnFilters={columnFilters}
-          onFilterChange={handleFilterChange}
+          onFilterApply={handleFilterApply}
           onRowClick={setSelectedRow}
           onTeamChange={handleRowTeamChange}
           onConfirmChange={onConfirmChange}
