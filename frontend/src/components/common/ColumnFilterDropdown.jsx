@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
 export function ColumnFilterDropdown({
@@ -15,7 +15,10 @@ export function ColumnFilterDropdown({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [tempSelected, setTempSelected] = useState(new Set(selectedValues || []));
+  const [size, setSize] = useState({ width: 280, height: 400 });
+  const [isResizing, setIsResizing] = useState(false);
   const dropdownRef = useRef(null);
+  const resizeRef = useRef({ startX: 0, startY: 0, startWidth: 0, startHeight: 0 });
 
   // Get unique values from column
   const uniqueValues = useMemo(() => {
@@ -67,6 +70,43 @@ export function ColumnFilterDropdown({
     }
   }, [isOpen, onClose]);
 
+  // Resize handlers
+  const handleResizeStart = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: size.width,
+      startHeight: size.height,
+    };
+  }, [size]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleResizeMove = (e) => {
+      const deltaX = e.clientX - resizeRef.current.startX;
+      const deltaY = e.clientY - resizeRef.current.startY;
+      setSize({
+        width: Math.max(200, Math.min(500, resizeRef.current.startWidth + deltaX)),
+        height: Math.max(250, Math.min(600, resizeRef.current.startHeight + deltaY)),
+      });
+    };
+
+    const handleResizeEnd = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleResizeMove);
+    document.addEventListener('mouseup', handleResizeEnd);
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+    };
+  }, [isResizing]);
+
   const handleSelectAll = () => {
     if (allFilteredSelected) {
       // Deselect all filtered values
@@ -117,11 +157,12 @@ export function ColumnFilterDropdown({
   return (
     <div
       ref={dropdownRef}
-      className="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl min-w-64 max-w-80 flex flex-col"
+      className="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl flex flex-col"
       style={{
         top: position?.top ?? '100%',
         left: position?.left ?? 0,
-        maxHeight: '400px',
+        width: `${size.width}px`,
+        height: `${size.height}px`,
       }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -239,6 +280,21 @@ export function ColumnFilterDropdown({
         >
           OK
         </button>
+      </div>
+
+      {/* Resize Handle */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize group"
+        title="Drag to resize"
+      >
+        <svg
+          className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z" />
+        </svg>
       </div>
     </div>
   );

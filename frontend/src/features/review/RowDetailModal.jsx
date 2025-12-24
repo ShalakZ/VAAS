@@ -13,8 +13,8 @@ export function RowDetailModal({
 }) {
   if (!row) return null;
 
-  // Order row entries: original columns first (in order), then classification columns
-  const classificationColumns = ['Assigned_Team', 'Reason', 'Needs_Review', 'Method', 'Fuzzy_Score', 'Matched_Rule', 'Pending_Confirmation'];
+  // Only show original Excel columns + Assigned_Team + Reason (user-facing only)
+  const visibleClassificationColumns = ['Assigned_Team', 'Reason'];
   const orderedEntries = [];
 
   // First add original columns in their order
@@ -26,17 +26,10 @@ export function RowDetailModal({
     });
   }
 
-  // Then add classification columns
-  classificationColumns.forEach(col => {
+  // Then add only user-facing classification columns
+  visibleClassificationColumns.forEach(col => {
     if (col in row && !orderedEntries.some(([key]) => key === col)) {
       orderedEntries.push([col, row[col]]);
-    }
-  });
-
-  // Finally add any remaining columns not yet included
-  Object.entries(row).forEach(([key, value]) => {
-    if (!orderedEntries.some(([k]) => k === key)) {
-      orderedEntries.push([key, value]);
     }
   });
 
@@ -90,7 +83,7 @@ export function RowDetailModal({
     <div className="flex justify-between items-center">
       <div className="flex items-center gap-2">
         <span className="text-xs text-gray-500 dark:text-gray-400">
-          {Object.keys(row).length} fields
+          {orderedEntries.length} fields
         </span>
         {isFuzzyMatch && (
           <span className="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
@@ -130,7 +123,14 @@ export function RowDetailModal({
   );
 
   return (
-    <Modal isOpen={!!row} onClose={onClose} title="Row Details" footer={footer}>
+    <Modal
+      isOpen={!!row}
+      onClose={onClose}
+      title="Row Details"
+      footer={footer}
+      resizable
+      defaultSize={{ width: 700, height: 500 }}
+    >
       <table className="w-full text-sm">
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
           {orderedEntries.map(([key, value]) => (
