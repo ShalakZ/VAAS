@@ -90,3 +90,8 @@ CLAUDE.md
 TEST_*.md
 TEST_*.txt
 tests/
+
+# Playwright testing
+.playwright-mcp/
+playwright-report/
+test-results/
