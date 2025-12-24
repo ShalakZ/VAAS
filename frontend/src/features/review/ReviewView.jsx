@@ -9,6 +9,7 @@ import { ExportButton, Button } from '../../components/common';
 export function ReviewView({
   data,
   stats,
+  columnOrder,
   onTeamChange,
   onConfirmChange,
   onSaveToKb,
@@ -198,6 +199,7 @@ export function ReviewView({
       {/* Row Detail Modal */}
       <RowDetailModal
         row={selectedRow}
+        columnOrder={columnOrder}
         onClose={() => setSelectedRow(null)}
         onTeamChange={handleModalTeamChange}
         onConfirmFuzzy={onConfirmFuzzy}

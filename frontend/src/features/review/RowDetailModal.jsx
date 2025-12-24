@@ -3,6 +3,7 @@ import { formatDateValue } from '../../utils/dateFormatter';
 
 export function RowDetailModal({
   row,
+  columnOrder,
   onClose,
   onTeamChange,
   onConfirmFuzzy,
@@ -11,6 +12,33 @@ export function RowDetailModal({
   canModifyKb,
 }) {
   if (!row) return null;
+
+  // Order row entries: original columns first (in order), then classification columns
+  const classificationColumns = ['Assigned_Team', 'Reason', 'Needs_Review', 'Method', 'Fuzzy_Score', 'Matched_Rule', 'Pending_Confirmation'];
+  const orderedEntries = [];
+
+  // First add original columns in their order
+  if (columnOrder && columnOrder.length > 0) {
+    columnOrder.forEach(col => {
+      if (col in row) {
+        orderedEntries.push([col, row[col]]);
+      }
+    });
+  }
+
+  // Then add classification columns
+  classificationColumns.forEach(col => {
+    if (col in row && !orderedEntries.some(([key]) => key === col)) {
+      orderedEntries.push([col, row[col]]);
+    }
+  });
+
+  // Finally add any remaining columns not yet included
+  Object.entries(row).forEach(([key, value]) => {
+    if (!orderedEntries.some(([k]) => k === key)) {
+      orderedEntries.push([key, value]);
+    }
+  });
 
   const renderValue = (key, value) => {
     // Boolean
@@ -105,7 +133,7 @@ export function RowDetailModal({
     <Modal isOpen={!!row} onClose={onClose} title="Row Details" footer={footer}>
       <table className="w-full text-sm">
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-          {Object.entries(row).map(([key, value]) => (
+          {orderedEntries.map(([key, value]) => (
             <tr key={key} className="hover:bg-gray-50 dark:hover:bg-gray-700">
               <td className="py-3 pr-4 font-semibold text-gray-600 dark:text-gray-300 w-1/3 align-top">
                 {key}

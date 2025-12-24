@@ -12,7 +12,7 @@ import './index.css';
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
-  const { teamsList, permissions, userInfo } = useConfig();
+  const { teamsList, permissions, userInfo, refreshTeams } = useConfig();
   const toast = useToast();
 
   // View State
@@ -131,6 +131,8 @@ function AppContent() {
           setData(updatedData);
           setStats(calculateStats(updatedData));
         }
+        // Refresh teams list in case new teams were added
+        await refreshTeams();
         toast.success(result.message);
       } else {
         toast.error(result.message);
@@ -140,7 +142,7 @@ function AppContent() {
     } finally {
       setLoading(false);
     }
-  }, [data, toast]);
+  }, [data, toast, refreshTeams]);
 
   // Confirm manual team change - show confirmation modal
   const handleConfirmChange = useCallback((row) => {
@@ -204,6 +206,9 @@ function AppContent() {
         setData(updatedData);
         setStats(calculateStats(updatedData));
 
+        // Refresh teams list in case new teams were added
+        await refreshTeams();
+
         // Show success message with re-classification info
         const changesMsg = result.changesCount > 0
           ? ` ${result.changesCount} additional items were automatically re-classified with the new rules!`
@@ -211,6 +216,8 @@ function AppContent() {
 
         toast.success(result.message + changesMsg);
       } else {
+        // Refresh teams list even if no reclassification happened
+        await refreshTeams();
         toast.success(result.message);
       }
     } catch (err) {
@@ -218,7 +225,7 @@ function AppContent() {
     } finally {
       setLoading(false);
     }
-  }, [data, toast]);
+  }, [data, toast, refreshTeams]);
 
   // Save to Knowledge Base - show confirmation
   const handleSaveToKb = useCallback(() => {
@@ -282,6 +289,8 @@ function AppContent() {
           setStats(calculateStats(result.reclassifiedData));
         }
 
+        // Refresh teams list in case new teams were added
+        await refreshTeams();
         toast.success(result.message);
       } else {
         toast.error(result.message);
@@ -291,7 +300,7 @@ function AppContent() {
     } finally {
       setLoading(false);
     }
-  }, [data, toast]);
+  }, [data, toast, refreshTeams]);
 
   // Confirm Fuzzy Match Handler - show confirmation
   const handleConfirmFuzzy = useCallback((row) => {
@@ -505,6 +514,7 @@ function AppContent() {
         <ReviewView
           data={data}
           stats={stats}
+          columnOrder={columnOrder}
           onTeamChange={handleTeamChange}
           onConfirmChange={handleConfirmChange}
           onSaveToKb={handleSaveToKb}

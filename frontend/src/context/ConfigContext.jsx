@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 
 const ConfigContext = createContext(null);
@@ -22,6 +22,22 @@ export function ConfigProvider({ children, config: initialConfig }) {
     userInfo: initialConfig?.userInfo || null,
     loading: true,
   });
+
+  // Function to refresh teams list from backend
+  const refreshTeams = useCallback(async () => {
+    try {
+      const res = await fetch('/config');
+      const data = await res.json();
+      if (data.teamsList) {
+        setConfig(prev => ({
+          ...prev,
+          teamsList: data.teamsList,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to refresh teams:', err);
+    }
+  }, []);
 
   useEffect(() => {
     // Fetch config from API
@@ -61,8 +77,13 @@ export function ConfigProvider({ children, config: initialConfig }) {
     );
   }
 
+  const contextValue = {
+    ...config,
+    refreshTeams,
+  };
+
   return (
-    <ConfigContext.Provider value={config}>
+    <ConfigContext.Provider value={contextValue}>
       {children}
     </ConfigContext.Provider>
   );
