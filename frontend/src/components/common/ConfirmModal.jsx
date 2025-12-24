@@ -1,6 +1,7 @@
-import { useEffect, useRef, useId } from 'react';
+import { useRef, useId } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from './Button';
+import { useModalFocus } from '../../hooks/useModalFocus';
 
 const variants = {
   danger: {
@@ -55,75 +56,11 @@ export function ConfirmModal({
   const titleId = useId();
   const descId = useId();
   const confirmButtonRef = useRef(null);
-  const previousActiveElement = useRef(null);
-  const modalRef = useRef(null);
+  const modalRef = useModalFocus(isOpen, onClose, confirmButtonRef);
 
   const variantStyle = variants[variant] || variants.warning;
 
-  // Store the previously focused element and focus the confirm button when opening
-  useEffect(() => {
-    if (isOpen) {
-      previousActiveElement.current = document.activeElement;
-      // Small delay to ensure the modal is rendered
-      setTimeout(() => {
-        confirmButtonRef.current?.focus();
-      }, 10);
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
-  // Restore focus when closing
-  useEffect(() => {
-    if (!isOpen && previousActiveElement.current) {
-      previousActiveElement.current.focus();
-    }
-  }, [isOpen]);
-
-  // Handle escape key and focus trapping
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-
-      // Focus trapping
-      if (e.key === 'Tab') {
-        const focusableElements = modalRef.current?.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (!focusableElements?.length) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey && document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement.focus();
-        } else if (!e.shiftKey && document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
-
-  const handleConfirm = () => {
-    onConfirm();
-  };
 
   return (
     <div
@@ -171,7 +108,7 @@ export function ConfirmModal({
           <Button
             ref={confirmButtonRef}
             variant={variantStyle.confirmVariant}
-            onClick={handleConfirm}
+            onClick={onConfirm}
             loading={loading}
           >
             {confirmText}
