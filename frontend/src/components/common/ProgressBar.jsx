@@ -33,8 +33,8 @@ export function ExportButton({ onClick, disabled, isExporting, label, exportingL
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`relative w-48 px-4 py-2 border dark:border-gray-600 rounded text-sm overflow-hidden group transition-colors ${
-        disabled ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+      className={`relative w-48 h-9 px-4 border dark:border-gray-600 rounded text-sm overflow-hidden group transition-colors ${
+        disabled ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700'
       }`}
     >
       {isExporting && (
@@ -43,10 +43,10 @@ export function ExportButton({ onClick, disabled, isExporting, label, exportingL
           style={{ width: `${isExporting}%` }}
         />
       )}
-      <div className={`relative z-10 flex items-center justify-center gap-2 ${isExporting ? textColors[color] : 'text-gray-700 dark:text-gray-200'}`}>
+      <div className={`relative z-10 flex items-center justify-center gap-2 h-full ${isExporting ? textColors[color] : 'text-gray-700 dark:text-gray-200'}`}>
         {isExporting ? (
           <>
-            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-4 w-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
