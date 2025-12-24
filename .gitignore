@@ -85,3 +85,8 @@ scripts/
 sonar_issues.txt
 *.orig
 CLAUDE.md
+
+# Test analysis files
+TEST_*.md
+TEST_*.txt
+tests/
