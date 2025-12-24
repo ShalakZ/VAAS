@@ -97,11 +97,18 @@ export function ReviewView({
   }, [processedData, currentPage, itemsPerPage]);
 
   const handleSort = (key) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
+    // Cycle through: ascending -> descending -> none (reset)
+    if (sortConfig.key === key) {
+      if (sortConfig.direction === 'ascending') {
+        setSortConfig({ key, direction: 'descending' });
+      } else {
+        // Was descending, now reset to no sort
+        setSortConfig({ key: null, direction: 'ascending' });
+      }
+    } else {
+      // New column, start with ascending
+      setSortConfig({ key, direction: 'ascending' });
     }
-    setSortConfig({ key, direction });
   };
 
   const handleFilterChange = (key, value) => {
