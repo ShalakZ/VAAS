@@ -22,6 +22,7 @@ export function Modal({ isOpen, onClose, title, children, footer, maxWidth = 'ma
         aria-labelledby={titleId}
         className={`bg-white dark:bg-gray-800 rounded-lg shadow-2xl ${maxWidth} w-full max-h-[90vh] overflow-hidden flex flex-col border-2 border-gray-300 dark:border-gray-600`}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="bg-gray-100 dark:bg-gray-900 px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
