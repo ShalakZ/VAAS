@@ -72,11 +72,13 @@ function AppContent() {
   const handleTeamChange = useCallback((rowToUpdate, newTeam) => {
     // Find the old row state for incremental stats update
     const oldRow = rowToUpdate;
-    const needsReview = newTeam === 'Unclassified' || newTeam === 'Application';
+    // Keep Needs_Review true if it was true (stay in review until confirmed)
+    // Mark as pending confirmation so user can confirm the change
     const newRow = {
       ...oldRow,
       Assigned_Team: newTeam,
-      Needs_Review: needsReview,
+      Needs_Review: oldRow.Needs_Review, // Keep original - don't auto-remove from review
+      Pending_Confirmation: oldRow.Needs_Review && newTeam !== 'Unclassified' && newTeam !== 'Application',
       Method: 'Manual Override',
     };
 
@@ -93,6 +95,77 @@ function AppContent() {
     setStats(prevStats => updateStatsIncremental(prevStats, oldRow, newRow));
   }, [data]);
 
+  // Execute manual change confirmation (called after user confirms)
+  const executeConfirmChange = useCallback(async (row) => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    setLoadingMessage('Confirming Assignment...');
+    setLoading(true);
+    try {
+      // Use the same logic as fuzzy confirm - save to KB and reclassify
+      const result = await kbService.confirmFuzzyMatch(row, data);
+
+      if (result.success) {
+        // Update table with reclassified data if available
+        if (result.reclassifiedData && result.reclassifiedData.length > 0) {
+          // Determine rule type to find matching items
+          const team = row.Assigned_Team;
+          const systemTeams = ['system admin', 'out of linux scope', 'out of platform scope'];
+          const isSystemTeam = systemTeams.includes(team?.toLowerCase());
+
+          // Clear Needs_Review for items that match the confirmed rule
+          const updatedData = result.reclassifiedData.map(item => {
+            const matches = isSystemTeam
+              ? item.Title === row.Title  // Title match for system teams
+              : item.hostname === row.hostname;  // Hostname match for other teams
+
+            if (matches && item.Assigned_Team === team) {
+              return {
+                ...item,
+                Needs_Review: false,
+                Pending_Confirmation: false,
+              };
+            }
+            return item;
+          });
+
+          setData(updatedData);
+          setStats(calculateStats(updatedData));
+        }
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (err) {
+      toast.error('Error confirming: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [data, toast]);
+
+  // Confirm manual team change - show confirmation modal
+  const handleConfirmChange = useCallback((row) => {
+    const team = row.Assigned_Team;
+    const systemTeams = ['system admin', 'out of linux scope', 'out of platform scope'];
+    const isSystemTeam = systemTeams.includes(team?.toLowerCase());
+
+    // Determine what will be added based on team type
+    let ruleDescription;
+    if (isSystemTeam) {
+      ruleDescription = `Title: "${row.Title}"\nTeam: ${team}`;
+    } else {
+      ruleDescription = `Hostname: "${row.hostname}"\nTeam: ${team}`;
+    }
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirm Assignment',
+      message: `Save this assignment as a permanent KB rule?\n\n${ruleDescription}\n\nThis will:\n1. Add this ${isSystemTeam ? 'title' : 'hostname'} rule to the Knowledge Base\n2. Update ALL similar items in the current table`,
+      variant: 'success',
+      confirmText: 'Confirm & Save',
+      onConfirm: () => executeConfirmChange(row),
+    });
+  }, [executeConfirmChange]);
+
   // Execute save to KB (called after confirmation)
   const executeSaveToKb = useCallback(async (hostnames, titles) => {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -104,8 +177,32 @@ function AppContent() {
 
       // If we got reclassified data back, update the table
       if (result.reclassifiedData && result.reclassifiedData.length > 0) {
-        setData(result.reclassifiedData);
-        setStats(calculateStats(result.reclassifiedData));
+        // Clear Needs_Review for items that match saved hostnames or titles
+        // Also clear for any item with Pending_Confirmation (user explicitly changed it)
+        const savedHostnames = Object.keys(hostnames);
+        const savedTitles = Object.keys(titles);
+
+        const updatedData = result.reclassifiedData.map(item => {
+          const hostnameMatch = savedHostnames.includes(item.hostname);
+          const titleMatch = savedTitles.includes(item.Title);
+          const isManualOverride = item.Method === 'Manual Override';
+
+          // Clear Needs_Review if:
+          // 1. Hostname matches a saved rule, OR
+          // 2. Title matches a saved rule, OR
+          // 3. It's a Manual Override (user explicitly changed it)
+          if (hostnameMatch || titleMatch || isManualOverride) {
+            return {
+              ...item,
+              Needs_Review: false,
+              Pending_Confirmation: false,
+            };
+          }
+          return item;
+        });
+
+        setData(updatedData);
+        setStats(calculateStats(updatedData));
 
         // Show success message with re-classification info
         const changesMsg = result.changesCount > 0
@@ -409,6 +506,7 @@ function AppContent() {
           data={data}
           stats={stats}
           onTeamChange={handleTeamChange}
+          onConfirmChange={handleConfirmChange}
           onSaveToKb={handleSaveToKb}
           onConfirmFuzzy={handleConfirmFuzzy}
           onExport={handleExport}

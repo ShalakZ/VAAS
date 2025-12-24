@@ -10,6 +10,7 @@ export function ReviewView({
   data,
   stats,
   onTeamChange,
+  onConfirmChange,
   onSaveToKb,
   onConfirmFuzzy,
   onExport,
@@ -177,6 +178,7 @@ export function ReviewView({
           onFilterChange={handleFilterChange}
           onRowClick={setSelectedRow}
           onTeamChange={handleRowTeamChange}
+          onConfirmChange={onConfirmChange}
           onConfirmFuzzy={onConfirmFuzzy}
           teamsList={teamsList}
           canModify={permissions.canModify}

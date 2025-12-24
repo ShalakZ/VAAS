@@ -8,6 +8,7 @@ export function DataTable({
   onFilterChange,
   onRowClick,
   onTeamChange,
+  onConfirmChange,
   onConfirmFuzzy,
   teamsList,
   canModify,
@@ -85,6 +86,23 @@ export function DataTable({
             <td className="p-3 text-gray-500 dark:text-gray-400 text-xs">
               <div className="flex items-center gap-2">
                 <span className="flex-1">{row.Reason}</span>
+                {/* Confirm button for manual team changes */}
+                {row.Pending_Confirmation && canModify && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onConfirmChange(row);
+                    }}
+                    className="flex-shrink-0 p-1 rounded bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 transition-colors"
+                    title="Confirm team assignment and remove from review"
+                    aria-label="Confirm team assignment"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                )}
+                {/* Confirm button for fuzzy matches */}
                 {row.Method === 'Fuzzy' && canModifyKb && (
                   <button
                     onClick={(e) => {
