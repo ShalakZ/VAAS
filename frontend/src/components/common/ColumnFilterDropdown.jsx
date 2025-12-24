@@ -17,6 +17,7 @@ export function ColumnFilterDropdown({
   const [tempSelected, setTempSelected] = useState(new Set(selectedValues || []));
   const [size, setSize] = useState({ width: 280, height: 400 });
   const [isResizing, setIsResizing] = useState(false);
+  const [adjustedPosition, setAdjustedPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef(null);
   const resizeRef = useRef({ startX: 0, startY: 0, startWidth: 0, startHeight: 0 });
 
@@ -38,13 +39,94 @@ export function ColumnFilterDropdown({
   const allFilteredSelected = filteredValues.length > 0 &&
     filteredValues.every(v => tempSelected.has(v));
 
-  // Reset temp selection when dropdown opens
+  // Reset temp selection and position when dropdown opens
   useEffect(() => {
     if (isOpen) {
       setTempSelected(new Set(selectedValues || []));
       setSearchTerm('');
+      setAdjustedPosition({ top: 0, left: 0 });
     }
   }, [isOpen, selectedValues]);
+
+  // Adjust position to stay within viewport (runs once after initial render)
+  useEffect(() => {
+    if (!isOpen || !dropdownRef.current) return;
+
+    // Use a small timeout to ensure the dropdown is rendered
+    const timer = setTimeout(() => {
+      const dropdown = dropdownRef.current;
+      if (!dropdown) return;
+
+      const rect = dropdown.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const padding = 10;
+
+      let offsetLeft = 0;
+      let offsetTop = 0;
+
+      // Check right edge overflow - shift left
+      if (rect.right > viewportWidth - padding) {
+        offsetLeft = viewportWidth - padding - rect.right;
+      }
+
+      // Check left edge overflow - shift right
+      if (rect.left + offsetLeft < padding) {
+        offsetLeft = padding - rect.left;
+      }
+
+      // Check bottom edge overflow - shift up
+      if (rect.bottom > viewportHeight - padding) {
+        offsetTop = viewportHeight - padding - rect.bottom;
+      }
+
+      // Check top edge overflow - shift down
+      if (rect.top + offsetTop < padding) {
+        offsetTop = padding - rect.top;
+      }
+
+      if (offsetLeft !== 0 || offsetTop !== 0) {
+        setAdjustedPosition({ top: offsetTop, left: offsetLeft });
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [isOpen]); // Only run when dropdown opens
+
+  // Recalculate position on window resize
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleWindowResize = () => {
+      const dropdown = dropdownRef.current;
+      if (!dropdown) return;
+
+      const rect = dropdown.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const padding = 10;
+
+      let offsetLeft = adjustedPosition.left;
+      let offsetTop = adjustedPosition.top;
+
+      // Check right edge overflow
+      if (rect.right > viewportWidth - padding) {
+        offsetLeft = adjustedPosition.left + (viewportWidth - padding - rect.right);
+      }
+
+      // Check bottom edge overflow
+      if (rect.bottom > viewportHeight - padding) {
+        offsetTop = adjustedPosition.top + (viewportHeight - padding - rect.bottom);
+      }
+
+      if (offsetLeft !== adjustedPosition.left || offsetTop !== adjustedPosition.top) {
+        setAdjustedPosition({ top: offsetTop, left: offsetLeft });
+      }
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [isOpen, adjustedPosition]);
 
   // Close on click outside
   useEffect(() => {
@@ -89,9 +171,16 @@ export function ColumnFilterDropdown({
     const handleResizeMove = (e) => {
       const deltaX = e.clientX - resizeRef.current.startX;
       const deltaY = e.clientY - resizeRef.current.startY;
+
+      // Calculate max size based on viewport and current position
+      const dropdown = dropdownRef.current;
+      const rect = dropdown?.getBoundingClientRect();
+      const maxWidth = rect ? Math.min(750, window.innerWidth - rect.left - 10) : 750;
+      const maxHeight = rect ? Math.min(600, window.innerHeight - rect.top - 10) : 600;
+
       setSize({
-        width: Math.max(200, Math.min(500, resizeRef.current.startWidth + deltaX)),
-        height: Math.max(250, Math.min(600, resizeRef.current.startHeight + deltaY)),
+        width: Math.max(200, Math.min(maxWidth, resizeRef.current.startWidth + deltaX)),
+        height: Math.max(350, Math.min(maxHeight, resizeRef.current.startHeight + deltaY)),
       });
     };
 
@@ -154,23 +243,26 @@ export function ColumnFilterDropdown({
 
   const isFiltered = selectedValues && selectedValues.size > 0 && selectedValues.size < uniqueValues.length;
 
+  // Calculate initial style with position adjustments
+  const dropdownStyle = {
+    top: `calc(${position?.top ?? '100%'} + ${adjustedPosition.top}px)`,
+    left: (position?.left ?? 0) + adjustedPosition.left,
+    width: `${size.width}px`,
+    height: `${size.height}px`,
+  };
+
   return (
     <div
       ref={dropdownRef}
       className="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl flex flex-col"
-      style={{
-        top: position?.top ?? '100%',
-        left: position?.left ?? 0,
-        width: `${size.width}px`,
-        height: `${size.height}px`,
-      }}
+      style={dropdownStyle}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Sort Options */}
-      <div className="border-b border-gray-200 dark:border-gray-700 p-2">
+      <div className="border-b border-gray-200 dark:border-gray-700 p-3">
         <button
           onClick={() => handleSort('ascending')}
-          className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer ${
+          className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer ${
             currentSort?.key === columnKey && currentSort?.direction === 'ascending'
               ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
               : 'text-gray-700 dark:text-gray-200'
@@ -183,7 +275,7 @@ export function ColumnFilterDropdown({
         </button>
         <button
           onClick={() => handleSort('descending')}
-          className={`w-full text-left px-3 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer ${
+          className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer ${
             currentSort?.key === columnKey && currentSort?.direction === 'descending'
               ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
               : 'text-gray-700 dark:text-gray-200'
@@ -197,11 +289,11 @@ export function ColumnFilterDropdown({
       </div>
 
       {/* Clear Filter */}
-      <div className="border-b border-gray-200 dark:border-gray-700 p-2">
+      <div className="border-b border-gray-200 dark:border-gray-700 p-3">
         <button
           onClick={handleClearFilter}
           disabled={!isFiltered}
-          className={`w-full text-left px-3 py-1.5 text-sm rounded flex items-center gap-2 cursor-pointer ${
+          className={`w-full text-left px-3 py-2 text-sm rounded flex items-center gap-2 cursor-pointer ${
             isFiltered
               ? 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'
               : 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
@@ -215,7 +307,7 @@ export function ColumnFilterDropdown({
       </div>
 
       {/* Search Box */}
-      <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-3 border-b border-gray-200 dark:border-gray-700">
         <input
           type="text"
           placeholder="Search..."
@@ -227,9 +319,9 @@ export function ColumnFilterDropdown({
       </div>
 
       {/* Checkbox List */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-2">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3">
         {/* Select All */}
-        <label className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer">
+        <label className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer">
           <input
             type="checkbox"
             checked={allFilteredSelected}
@@ -245,7 +337,7 @@ export function ColumnFilterDropdown({
         {filteredValues.map((value, idx) => (
           <label
             key={idx}
-            className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+            className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
           >
             <input
               type="checkbox"
@@ -267,7 +359,7 @@ export function ColumnFilterDropdown({
       </div>
 
       {/* OK / Cancel Buttons */}
-      <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-2 flex justify-end gap-2">
+      <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3 flex justify-end gap-2">
         <button
           onClick={onClose}
           className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer"

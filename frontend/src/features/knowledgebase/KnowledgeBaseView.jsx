@@ -104,7 +104,7 @@ export function KnowledgeBaseView({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 mb-6 border-b dark:border-gray-700">
+      <div className="flex gap-4 pt-4 mb-6 border-b dark:border-gray-700">
         <button
           className={`pb-2 px-4 font-medium transition-colors ${
             kbTab === 'hostnames'
