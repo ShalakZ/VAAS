@@ -33,8 +33,8 @@ export function ExportButton({ onClick, disabled, isExporting, label, exportingL
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`relative w-48 h-9 px-4 border dark:border-gray-600 rounded text-sm overflow-hidden group transition-colors ${
-        disabled ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700'
+      className={`relative w-48 h-9 px-4 border dark:border-gray-600 rounded text-sm overflow-hidden group transition-all ${
+        disabled ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-sm'
       }`}
     >
       {isExporting && (

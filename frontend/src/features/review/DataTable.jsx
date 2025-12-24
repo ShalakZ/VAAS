@@ -93,7 +93,7 @@ export function DataTable({
                       e.stopPropagation();
                       onConfirmChange(row);
                     }}
-                    className="flex-shrink-0 p-1 rounded bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 transition-colors"
+                    className="flex-shrink-0 p-1 rounded bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 transition-colors cursor-pointer"
                     title="Confirm team assignment and remove from review"
                     aria-label="Confirm team assignment"
                   >
@@ -109,7 +109,7 @@ export function DataTable({
                       e.stopPropagation();
                       onConfirmFuzzy(row);
                     }}
-                    className="flex-shrink-0 p-1 rounded bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 transition-colors"
+                    className="flex-shrink-0 p-1 rounded bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 transition-colors cursor-pointer"
                     title="Confirm this match and add to Knowledge Base"
                     aria-label="Confirm fuzzy match and add to Knowledge Base"
                   >
