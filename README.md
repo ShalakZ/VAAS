@@ -75,7 +75,10 @@ Then open **http://localhost:8085** | Login: `admin` / `admin`
 ### Docker Alternative
 
 ```bash
-docker run -d -p 8085:8085 --name vaas ziadshalak/vaas:1.1
+docker run -d -p 8085:8085 --name vaas \
+  -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
+  -v vaas-data:/app/data \
+  ziadshalak/vaas:1.1
 ```
 
 ---
@@ -153,6 +156,8 @@ docker run -d \
   --restart unless-stopped \
   ziadshalak/vaas:1.1
 ```
+
+> **Persistent Data:** The `-v vaas-data:/app/data` volume stores your Knowledge Base (rules, hostnames), user accounts, and configuration. Without it, data is lost when the container is removed.
 
 Access at **http://localhost:8085** | Default login: `admin` / `admin`
 
