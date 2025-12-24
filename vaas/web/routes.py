@@ -252,9 +252,10 @@ def classify():
                 details={'filename': filename, 'error': str(e)}
             )
 
-        # Return sanitized JSON
+        # Return sanitized JSON with explicit column order
         return jsonify({
             'data': results,
+            'columns': list(result_df.columns),  # Preserve column order for export
             'report_uuid': report_uuid
         })
 
@@ -272,8 +273,18 @@ def export_files():
     req = request.json
     data = req.get('data')
     export_type = req.get('type')
+    column_order = req.get('columns')  # Optional: preserve column order from frontend
 
-    df = pd.DataFrame(data)
+    # Create DataFrame preserving column order
+    if data and len(data) > 0:
+        if column_order:
+            # Use explicitly provided column order
+            df = pd.DataFrame(data, columns=column_order)
+        else:
+            # Preserve order from first row's keys (Python 3.7+ dict order)
+            df = pd.DataFrame(data, columns=list(data[0].keys()))
+    else:
+        df = pd.DataFrame(data)
 
     if export_type == 'master':
         AuditLogger.log_app_event(
@@ -300,11 +311,97 @@ def export_files():
                 if not team: continue
                 team_df = df[df['Assigned_Team'] == team]
 
-                excel_buffer = io.BytesIO()
-                with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-                    team_df.to_excel(writer, index=False)
-                excel_buffer.seek(0)
+                # Find Severity column (common variations)
+                severity_col = None
+                for col in team_df.columns:
+                    if col.lower() in ['severity', 'risk', 'risk level', 'severity level', 'criticality']:
+                        severity_col = col
+                        break
 
+                excel_buffer = io.BytesIO()
+
+                # Use xlsxwriter for pivot table support
+                import xlsxwriter
+                workbook = xlsxwriter.Workbook(excel_buffer, {'in_memory': True})
+
+                # Sheet 1: Vulnerability Data
+                data_sheet = workbook.add_worksheet('Vulnerabilities')
+                columns = list(team_df.columns)
+
+                # Write headers
+                for col_idx, col_name in enumerate(columns):
+                    data_sheet.write(0, col_idx, col_name)
+
+                # Write data rows
+                for row_idx, row in enumerate(team_df.values, start=1):
+                    for col_idx, value in enumerate(row):
+                        # Handle NaN and other types
+                        if pd.isna(value):
+                            data_sheet.write(row_idx, col_idx, '')
+                        else:
+                            data_sheet.write(row_idx, col_idx, value)
+
+                # Sheet 2: Summary (static crosstab)
+                summary_sheet = workbook.add_worksheet('Summary')
+                if severity_col and 'Title' in team_df.columns:
+                    pivot_df = pd.crosstab(
+                        team_df['Title'],
+                        team_df[severity_col],
+                        margins=True,
+                        margins_name='Total'
+                    )
+                    # Write crosstab
+                    summary_sheet.write(0, 0, 'Title')
+                    for col_idx, col_name in enumerate(pivot_df.columns, start=1):
+                        summary_sheet.write(0, col_idx, col_name)
+                    for row_idx, (title, row) in enumerate(pivot_df.iterrows(), start=1):
+                        summary_sheet.write(row_idx, 0, title)
+                        for col_idx, value in enumerate(row.values, start=1):
+                            summary_sheet.write(row_idx, col_idx, value)
+                elif 'Title' in team_df.columns:
+                    summary_df = team_df['Title'].value_counts().reset_index()
+                    summary_sheet.write(0, 0, 'Title')
+                    summary_sheet.write(0, 1, 'Count')
+                    for row_idx, row in enumerate(summary_df.values, start=1):
+                        summary_sheet.write(row_idx, 0, row[0])
+                        summary_sheet.write(row_idx, 1, row[1])
+
+                # Sheet 3: Severity Count pivot table using pandas
+                if severity_col:
+                    # Create pivot: Severity -> Count
+                    severity_pivot = team_df[severity_col].value_counts().reset_index()
+                    severity_pivot.columns = [severity_col, 'Count']
+                    # Sort by severity (Critical > High > Medium > Low > Info)
+                    severity_order = {'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Info': 4, 'Informational': 5}
+                    severity_pivot['_sort'] = severity_pivot[severity_col].map(lambda x: severity_order.get(x, 99))
+                    severity_pivot = severity_pivot.sort_values('_sort').drop('_sort', axis=1)
+
+                    # Add total row
+                    total_row = pd.DataFrame({severity_col: ['Total'], 'Count': [severity_pivot['Count'].sum()]})
+                    severity_pivot = pd.concat([severity_pivot, total_row], ignore_index=True)
+
+                    # Write to pivot sheet
+                    pivot_sheet = workbook.add_worksheet('Pivot Table')
+                    header_fmt = workbook.add_format({'bold': True, 'bg_color': '#4472C4', 'font_color': 'white', 'border': 1})
+                    cell_fmt = workbook.add_format({'border': 1})
+                    total_fmt = workbook.add_format({'bold': True, 'border': 1, 'bg_color': '#D9E2F3'})
+
+                    # Write headers
+                    pivot_sheet.write(0, 0, severity_col, header_fmt)
+                    pivot_sheet.write(0, 1, 'Count', header_fmt)
+
+                    # Write data
+                    for row_idx, row in enumerate(severity_pivot.values, start=1):
+                        fmt = total_fmt if row[0] == 'Total' else cell_fmt
+                        pivot_sheet.write(row_idx, 0, row[0], fmt)
+                        pivot_sheet.write(row_idx, 1, row[1], fmt)
+
+                    # Set column widths
+                    pivot_sheet.set_column('A:A', 15)
+                    pivot_sheet.set_column('B:B', 10)
+
+                workbook.close()
+                excel_buffer.seek(0)
                 zip_file.writestr(f"{team}_vulnerabilities.xlsx", excel_buffer.read())
 
         zip_buffer.seek(0)

@@ -32,13 +32,18 @@ export const classifyService = {
     });
 
     const json = await response.json();
-    
-    // Handle new response format { data: [...], report_uuid: ... }
+
+    // Return full response with data, columns, and report_uuid
     if (json.data && Array.isArray(json.data)) {
-      return json.data;
+      return {
+        data: json.data,
+        columns: json.columns || [],  // Column order from backend
+        report_uuid: json.report_uuid
+      };
     }
-    
-    return json;
+
+    // Legacy format fallback
+    return { data: json, columns: [], report_uuid: null };
   },
 
   async submitCorrections(data) {
@@ -56,11 +61,16 @@ export const classifyService = {
  * Export service
  */
 export const exportService = {
-  async exportData(data, type) {
+  async exportData(data, type, columns = null) {
+    const payload = { data, type };
+    if (columns && columns.length > 0) {
+      payload.columns = columns;  // Preserve original column order
+    }
+
     const response = await fetchApi('/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data, type })
+      body: JSON.stringify(payload)
     });
 
     const contentDisposition = response.headers.get('content-disposition');

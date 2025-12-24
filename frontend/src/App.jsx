@@ -21,6 +21,7 @@ function AppContent() {
 
   // Data State
   const [data, setData] = useState([]);
+  const [columnOrder, setColumnOrder] = useState([]);  // Preserve original column order for export
   const [stats, setStats] = useState({ total: 0, auto: 0, review: 0, fuzzy: 0 });
   const [currentFileName, setCurrentFileName] = useState('');
 
@@ -54,9 +55,11 @@ function AppContent() {
     setError(null);
 
     try {
-      const jsonData = await classifyService.uploadFile(file);
-      setData(jsonData);
-      setStats(calculateStats(jsonData));
+      const result = await classifyService.uploadFile(file);
+      setData(result.data);
+      // Use column order from backend (preserves original file order)
+      setColumnOrder(result.columns || []);
+      setStats(calculateStats(result.data));
       setView('review');
     } catch (err) {
       setError(err.message);
@@ -228,7 +231,7 @@ function AppContent() {
     setExportingType(type);
 
     try {
-      const { blob, filename } = await exportService.exportData(data, type);
+      const { blob, filename } = await exportService.exportData(data, type, columnOrder);
       setExportProgress(100);
       await new Promise(r => setTimeout(r, 200));
       exportService.downloadBlob(blob, filename);
@@ -237,7 +240,7 @@ function AppContent() {
     } finally {
       setExportingType(null);
     }
-  }, [data, exportingType, setExportProgress, toast]);
+  }, [data, columnOrder, exportingType, setExportProgress, toast]);
 
   // Knowledge Base Handlers
   const fetchKbData = useCallback(async () => {

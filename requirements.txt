@@ -28,3 +28,4 @@ psycopg2-binary>=2.9.0
 
 # SQL Server / Azure SQL (optional)
 pyodbc>=4.0.0
+xlsxwriter

@@ -348,9 +348,12 @@ class RuleEngine:
             df: DataFrame with Title and hostname columns
 
         Returns:
-            DataFrame with classification columns added
+            DataFrame with classification columns added (preserving original column order)
         """
-        # Normalize column names
+        # Store original column order before any modifications
+        original_columns = list(df.columns)
+
+        # Normalize column names (map common variations to standard names)
         col_map = {
             'Hostname': 'hostname', 'DNS Name': 'hostname', 'Computer Name': 'hostname',
             'Vulnerability': 'Title', 'Name': 'Title', 'Vulnerability Title': 'Title',
@@ -358,6 +361,9 @@ class RuleEngine:
             'OS Name': 'OS', 'Operating System': 'OS'
         }
         df = df.rename(columns=col_map)
+
+        # Track which columns were renamed for ordering
+        renamed_columns = [col_map.get(c, c) for c in original_columns]
 
         # Ensure required columns exist
         if 'Title' not in df.columns:
@@ -391,12 +397,18 @@ class RuleEngine:
         results_df = pd.DataFrame(results)
 
         # Add classification columns to original DataFrame
+        classification_columns = ['Assigned_Team', 'Reason', 'Needs_Review', 'Method', 'Fuzzy_Score', 'Matched_Rule']
         df['Assigned_Team'] = results_df['Assigned_Team'].values
         df['Reason'] = results_df['Reason'].values
         df['Needs_Review'] = results_df['Needs_Review'].values
         df['Method'] = results_df['Method'].values
         df['Fuzzy_Score'] = results_df['Fuzzy_Score'].values
         df['Matched_Rule'] = results_df['Matched_Rule'].values
+
+        # Reorder columns: original columns first (in original order), then classification columns at end
+        # Use renamed_columns to preserve original order but with normalized names
+        final_column_order = renamed_columns + [c for c in classification_columns if c not in renamed_columns]
+        df = df[[c for c in final_column_order if c in df.columns]]
 
         # Log summary
         method_counts = results_df['Method'].value_counts().to_dict()
