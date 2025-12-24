@@ -11,6 +11,7 @@ export function Header({
   onSidebarOpen,
   onNewAnalysis,
   onKbClick,
+  exportProgress,
 }) {
   return (
     <header className="mb-8 flex flex-col gap-4">
@@ -94,7 +95,7 @@ export function Header({
       {/* Workflow Steps - only show for upload/review views */}
       {(view === 'upload' || view === 'review') && (
         <div className="flex justify-center">
-          <WorkflowSteps currentStep={view} hasData={hasData} />
+          <WorkflowSteps currentStep={view} hasData={hasData} exportProgress={exportProgress} />
         </div>
       )}
     </header>
@@ -111,4 +112,5 @@ Header.propTypes = {
   onSidebarOpen: PropTypes.func,
   onNewAnalysis: PropTypes.func,
   onKbClick: PropTypes.func,
+  exportProgress: PropTypes.number,
 };

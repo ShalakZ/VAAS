@@ -499,6 +499,7 @@ function AppContent() {
         onSidebarOpen={() => setSidebarOpen(true)}
         onNewAnalysis={handleNewAnalysis}
         onKbClick={handleKbNavigate}
+        exportProgress={exportProgress}
       />
 
       {error && (
