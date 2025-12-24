@@ -66,6 +66,7 @@ export function ConfirmModal({
     <div
       className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/50 dark:bg-black/70"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
       role="presentation"
     >
       <div
