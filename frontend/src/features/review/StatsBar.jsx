@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 export function StatsBar({ stats, filter, setFilter, currentPage, totalPages }) {
   const filterButtons = [
     { key: 'all', label: 'Total', count: stats.total, colors: 'bg-blue-600 text-white shadow-md', inactiveColors: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50' },
@@ -26,3 +28,16 @@ export function StatsBar({ stats, filter, setFilter, currentPage, totalPages }) 
     </div>
   );
 }
+
+StatsBar.propTypes = {
+  stats: PropTypes.shape({
+    total: PropTypes.number,
+    auto: PropTypes.number,
+    review: PropTypes.number,
+    fuzzy: PropTypes.number,
+  }).isRequired,
+  filter: PropTypes.string.isRequired,
+  setFilter: PropTypes.func.isRequired,
+  currentPage: PropTypes.number.isRequired,
+  totalPages: PropTypes.number.isRequired,
+};

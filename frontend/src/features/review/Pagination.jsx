@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Select } from '../../components/common';
 
 export function Pagination({
@@ -52,3 +53,11 @@ export function Pagination({
     </div>
   );
 }
+
+Pagination.propTypes = {
+  currentPage: PropTypes.number.isRequired,
+  totalPages: PropTypes.number.isRequired,
+  itemsPerPage: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
+  onItemsPerPageChange: PropTypes.func.isRequired,
+};

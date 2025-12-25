@@ -9,6 +9,7 @@ import { KnowledgeBaseView } from './features/knowledgebase';
 import { SettingsView } from './features/settings';
 import { classifyService, exportService, kbService } from './services/api';
 import { calculateStats, updateStatsIncremental } from './utils/stats';
+import { SYSTEM_TEAMS, isSystemTeam } from './constants/teams';
 import './index.css';
 
 function AppContent() {
@@ -110,12 +111,11 @@ function AppContent() {
         if (result.reclassifiedData && result.reclassifiedData.length > 0) {
           // Determine rule type to find matching items
           const team = row.Assigned_Team;
-          const systemTeams = ['system admin', 'out of linux scope', 'out of platform scope'];
-          const isSystemTeam = systemTeams.includes(team?.toLowerCase());
+          const teamIsSystem = isSystemTeam(team);
 
           // Clear Needs_Review for items that match the confirmed rule
           const updatedData = result.reclassifiedData.map(item => {
-            const matches = isSystemTeam
+            const matches = teamIsSystem
               ? item.Title === row.Title  // Title match for system teams
               : item.hostname === row.hostname;  // Hostname match for other teams
 
@@ -148,12 +148,11 @@ function AppContent() {
   // Confirm manual team change - show confirmation modal
   const handleConfirmChange = useCallback((row) => {
     const team = row.Assigned_Team;
-    const systemTeams = ['system admin', 'out of linux scope', 'out of platform scope'];
-    const isSystemTeam = systemTeams.includes(team?.toLowerCase());
+    const teamIsSystem = isSystemTeam(team);
 
     // Determine what will be added based on team type
     let ruleDescription;
-    if (isSystemTeam) {
+    if (teamIsSystem) {
       ruleDescription = `Title: "${row.Title}"\nTeam: ${team}`;
     } else {
       ruleDescription = `Hostname: "${row.hostname}"\nTeam: ${team}`;
@@ -311,12 +310,11 @@ function AppContent() {
     }
 
     const team = row.Assigned_Team;
-    const systemTeams = ['system admin', 'out of linux scope', 'out of platform scope'];
-    const isSystemTeam = systemTeams.includes(team?.toLowerCase());
+    const teamIsSystem = isSystemTeam(team);
 
     // Determine what will be added based on team type
     let ruleDescription;
-    if (isSystemTeam) {
+    if (teamIsSystem) {
       ruleDescription = `Title: "${row.Title}"\nTeam: ${team}`;
     } else {
       ruleDescription = `Hostname: "${row.hostname}"\nTeam: ${team}`;

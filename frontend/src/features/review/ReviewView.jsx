@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { StatsBar } from './StatsBar';
 import { DataTable } from './DataTable';
 import { Pagination } from './Pagination';
@@ -228,3 +229,27 @@ export function ReviewView({
     </div>
   );
 }
+
+ReviewView.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.object).isRequired,
+  stats: PropTypes.shape({
+    total: PropTypes.number,
+    auto: PropTypes.number,
+    review: PropTypes.number,
+    fuzzy: PropTypes.number,
+  }).isRequired,
+  columnOrder: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onTeamChange: PropTypes.func.isRequired,
+  onConfirmChange: PropTypes.func.isRequired,
+  onSaveToKb: PropTypes.func.isRequired,
+  onConfirmFuzzy: PropTypes.func.isRequired,
+  onExport: PropTypes.func.isRequired,
+  exportingType: PropTypes.string,
+  exportProgress: PropTypes.number,
+  teamsList: PropTypes.arrayOf(PropTypes.string).isRequired,
+  permissions: PropTypes.shape({
+    canModify: PropTypes.bool,
+    canModifyKb: PropTypes.bool,
+    canExport: PropTypes.bool,
+  }).isRequired,
+};

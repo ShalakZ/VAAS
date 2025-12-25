@@ -379,8 +379,10 @@ def change_password_api(user_id):
     data = request.json
     new_password = data.get('password', '')
     
-    if not new_password or len(new_password) < 4:
-        return jsonify({'success': False, 'message': 'Password must be at least 4 characters'}), 400
+    if not new_password or len(new_password) < 8:
+        return jsonify({'success': False, 'message': 'Password must be at least 8 characters'}), 400
+    if len(new_password) > 128:
+        return jsonify({'success': False, 'message': 'Password must not exceed 128 characters'}), 400
     
     success, message = UserDB.change_password(user_id, new_password)
     return jsonify({'success': success, 'message': message})

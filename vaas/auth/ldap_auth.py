@@ -4,10 +4,43 @@ Supports Active Directory with service account authentication and role-based acc
 """
 
 import logging
+import re
 from ldap3 import Server, Connection, ALL, SUBTREE
 from flask_login import UserMixin
 
 logger = logging.getLogger(__name__)
+
+
+def escape_ldap_filter(value: str) -> str:
+    """
+    Escape special characters in LDAP filter values to prevent injection attacks.
+
+    According to RFC 4515, the following characters must be escaped:
+    * ( ) \ NUL
+
+    Args:
+        value: The string to escape
+
+    Returns:
+        The escaped string safe for use in LDAP filters
+    """
+    if not value:
+        return value
+
+    # Characters that must be escaped in LDAP filters (RFC 4515)
+    escape_chars = {
+        '\\': r'\5c',  # Must be first to avoid double-escaping
+        '*': r'\2a',
+        '(': r'\28',
+        ')': r'\29',
+        '\x00': r'\00',  # NUL character
+    }
+
+    result = value
+    for char, escaped in escape_chars.items():
+        result = result.replace(char, escaped)
+
+    return result
 
 
 class User(UserMixin):
@@ -150,9 +183,10 @@ class LDAPAuth:
             )
             logger.debug("LDAP Auth: Service account connected successfully")
             
-            # Search for user
-            search_filter = self.user_filter.format(username=username)
-            logger.debug(f"LDAP Auth: Searching for user with filter: {search_filter} in base: {self.base_dn}")
+            # Search for user - escape username to prevent LDAP injection
+            escaped_username = escape_ldap_filter(username)
+            search_filter = self.user_filter.format(username=escaped_username)
+            logger.debug(f"LDAP Auth: Searching for user in base: {self.base_dn}")
             
             service_conn.search(
                 search_base=self.base_dn,
@@ -236,7 +270,8 @@ class LDAPAuth:
                 auto_bind=True
             )
             
-            search_filter = self.user_filter.format(username=username)
+            escaped_username = escape_ldap_filter(username)
+            search_filter = self.user_filter.format(username=escaped_username)
             service_conn.search(
                 search_base=self.base_dn,
                 search_filter=search_filter,
@@ -300,8 +335,9 @@ class LDAPAuth:
                 auto_bind=True
             )
             
-            # Search filter: match username or display name
-            search_filter = f"(&(objectClass=user)(|(sAMAccountName=*{search_query}*)(displayName=*{search_query}*)(mail=*{search_query}*)))"
+            # Search filter: match username or display name - escape query to prevent LDAP injection
+            escaped_query = escape_ldap_filter(search_query)
+            search_filter = f"(&(objectClass=user)(|(sAMAccountName=*{escaped_query}*)(displayName=*{escaped_query}*)(mail=*{escaped_query}*)))"
             
             service_conn.search(
                 search_base=self.base_dn,

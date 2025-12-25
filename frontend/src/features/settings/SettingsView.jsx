@@ -463,8 +463,8 @@ function AddUserModal({ onClose, onSuccess }) {
       toast.error('Username and password are required');
       return;
     }
-    if (form.password.length < 4) {
-      toast.error('Password must be at least 4 characters');
+    if (form.password.length < 8) {
+      toast.error('Password must be at least 8 characters');
       return;
     }
 
@@ -702,8 +702,8 @@ function ChangePasswordModal({ user, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password.length < 4) {
-      toast.error('Password must be at least 4 characters');
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters');
       return;
     }
     if (password !== confirmPassword) {
