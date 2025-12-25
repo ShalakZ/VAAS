@@ -1,4 +1,4 @@
-# VAAS - Vulnerability Assessment Automation System
+# VAAS - Vulnerability Auto Assignment System
 
 VAAS is an intelligent automation tool that automates the assignment of vulnerability assessment findings to the correct IT teams. It uses a hybrid approach combining **fuzzy matching**, **smart rule-based classification**, and a comprehensive **Knowledge Base** to ensure accurate, consistent team assignments.
 
@@ -232,7 +232,7 @@ For running as a background service on Linux servers.
 **1. Create service file** `/etc/systemd/system/vaas.service`:
 ```ini
 [Unit]
-Description=VAAS - Vulnerability Assignment Automation System
+Description=VAAS - Vulnerability Auto Assignment System
 After=network.target
 
 [Service]
