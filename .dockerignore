@@ -44,6 +44,7 @@ Thumbs.db
 
 # Data (mounted as volumes)
 data/*.db
+!data/knowledge_base.db
 data/*.db-journal
 data/*.xlsx
 data/*.json

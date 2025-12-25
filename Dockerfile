@@ -57,6 +57,9 @@ COPY --from=frontend-builder /frontend-dist ./vaas/web/static/dist/
 # Copy example config files (will be overwritten by volume mounts)
 COPY data/*.example ./data/
 
+# Copy pre-populated Knowledge Base (seed data)
+COPY data/knowledge_base.db ./data/
+
 # Copy entrypoint script with proper permissions
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/
 
