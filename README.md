@@ -78,7 +78,7 @@ Then open **http://localhost:8085** | Login: `admin` / `admin`
 docker run -d -p 8085:8085 --name vaas \
   -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
   -v vaas-data:/app/data \
-  ziadshalak/vaas:1.1
+  ziadshalak/vaas:2.0
 ```
 
 ---
@@ -154,7 +154,7 @@ docker run -d \
   -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
   -v vaas-data:/app/data \
   --restart unless-stopped \
-  ziadshalak/vaas:1.1
+  ziadshalak/vaas:2.0
 ```
 
 > **Persistent Data:** The `-v vaas-data:/app/data` volume stores your Knowledge Base (rules, hostnames), user accounts, and configuration. Without it, data is lost when the container is removed.
@@ -299,7 +299,7 @@ Configure via `.env` file, environment variables, or `docker-compose.yml`.
 **Custom port (8080):**
 ```bash
 # Docker
-docker run -d -p 8080:8085 --name vaas ziadshalak/vaas:1.1
+docker run -d -p 8080:8085 --name vaas ziadshalak/vaas:2.0
 
 # Manual
 VAAS_PORT=8080 python -m vaas.main
@@ -324,7 +324,7 @@ docker run -d \
   -e LDAP_HOST=ldap.company.com \
   -e LDAP_BASE_DN=DC=company,DC=com \
   -v vaas-data:/app/data \
-  ziadshalak/vaas:1.1
+  ziadshalak/vaas:2.0
 ```
 
 ### Post-Deployment Configuration
