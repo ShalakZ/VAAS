@@ -8,7 +8,7 @@
 
 services:
   vaas:
-    image: mzaqstpziadshalak/vaas:2.0
+    image: meezaqstp/vaas:1.0
     container_name: vaas
     restart: unless-stopped
     ports:

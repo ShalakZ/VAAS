@@ -46,7 +46,7 @@ VAAS is an intelligent automation tool that automates the assignment of vulnerab
 
 **Linux/Mac:**
 ```bash
-git clone https://github.com/ShalakZ/VAAS.git
+git clone https://github.com/meezaqstp/vaas.git
 cd VAAS
 ./setup.sh
 ./run.sh
@@ -54,7 +54,7 @@ cd VAAS
 
 **Windows (using Git Bash):**
 ```bash
-git clone https://github.com/ShalakZ/VAAS.git
+git clone https://github.com/meezaqstp/vaas.git
 cd VAAS
 ./setup.sh
 ./run.sh
@@ -78,7 +78,7 @@ Then open **http://localhost:8085** | Login: `admin` / `admin`
 docker run -d -p 8085:8085 --name vaas \
   -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
   -v vaas-data:/app/data \
-  mzaqstpziadshalak/vaas:2.0
+  meezaqstp/vaas:1.0
 ```
 
 ---
@@ -131,13 +131,13 @@ Pull the pre-built image - no build required.
 
 **One-liner deployment:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ShalakZ/VAAS/main/deploy.sh | bash
+curl -fsSL https://raw.githubusercontent.com/meezaqstp/vaas/main/deploy.sh | bash
 ```
 
 **Or using Docker Compose (recommended for customization):**
 ```bash
 # Download the production compose file
-curl -O https://raw.githubusercontent.com/ShalakZ/VAAS/main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/meezaqstp/vaas/main/docker-compose.prod.yml
 
 # Edit configuration (port, LDAP, database, etc.)
 nano docker-compose.prod.yml
@@ -154,7 +154,7 @@ docker run -d \
   -e FLASK_SECRET_KEY=$(openssl rand -hex 32) \
   -v vaas-data:/app/data \
   --restart unless-stopped \
-  mzaqstpziadshalak/vaas:2.0
+  meezaqstp/vaas:1.0
 ```
 
 > **Persistent Data:** The `-v vaas-data:/app/data` volume stores your Knowledge Base (rules, hostnames), user accounts, and configuration. Without it, data is lost when the container is removed.
@@ -169,7 +169,7 @@ Build the image locally from source code.
 
 ```bash
 # Clone repository
-git clone https://github.com/ShalakZ/VAAS.git
+git clone https://github.com/meezaqstp/vaas.git
 cd VAAS
 
 # Build and run
@@ -192,7 +192,7 @@ Run directly with Python (no Docker).
 
 ```bash
 # Clone repository
-git clone https://github.com/ShalakZ/VAAS.git
+git clone https://github.com/meezaqstp/vaas.git
 cd VAAS
 
 # Set up Python environment
@@ -299,7 +299,7 @@ Configure via `.env` file, environment variables, or `docker-compose.yml`.
 **Custom port (8080):**
 ```bash
 # Docker
-docker run -d -p 8080:8085 --name vaas mzaqstpziadshalak/vaas:2.0
+docker run -d -p 8080:8085 --name vaas meezaqstp/vaas:1.0
 
 # Manual
 VAAS_PORT=8080 python -m vaas.main
@@ -324,7 +324,7 @@ docker run -d \
   -e LDAP_HOST=ldap.company.com \
   -e LDAP_BASE_DN=DC=company,DC=com \
   -v vaas-data:/app/data \
-  mzaqstpziadshalak/vaas:2.0
+  meezaqstp/vaas:1.0
 ```
 
 ### Post-Deployment Configuration
@@ -477,4 +477,4 @@ Private repository - All rights reserved.
 
 ## Author
 
-Ziad Shalak - [@ShalakZ](https://github.com/ShalakZ)
+[@meezaqstp](https://github.com/meezaqstp)

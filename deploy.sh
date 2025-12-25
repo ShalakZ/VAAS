@@ -1,6 +1,6 @@
 #!/bin/bash
 # VAAS Quick Deployment Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/ShalakZ/VAAS/main/deploy.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/meezaqstp/vaas/main/deploy.sh | bash
 
 set -e
 
@@ -19,7 +19,7 @@ SECRET_KEY=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -
 # Pull latest image
 echo ""
 echo "Pulling latest VAAS image..."
-docker pull mzaqstpziadshalak/vaas:2.0
+docker pull meezaqstp/vaas:1.0
 
 # Stop existing container if running
 docker stop vaas 2>/dev/null || true
@@ -35,7 +35,7 @@ docker run -d \
   -e VAAS_THRESHOLD=0.85 \
   -v vaas-data:/app/data \
   --restart unless-stopped \
-  mzaqstpziadshalak/vaas:2.0
+  meezaqstp/vaas:1.0
 
 echo ""
 echo "============================================"
