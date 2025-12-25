@@ -6,6 +6,7 @@ import { LoadingOverlay, ErrorBoundary, ToastContainer, ConfirmModal } from './c
 import { UploadView } from './features/upload';
 import { ReviewView } from './features/review';
 import { KnowledgeBaseView } from './features/knowledgebase';
+import { SettingsView } from './features/settings';
 import { classifyService, exportService, kbService } from './services/api';
 import { calculateStats, updateStatsIncremental } from './utils/stats';
 import './index.css';
@@ -475,7 +476,7 @@ function AppContent() {
   }, [executeNewAnalysis]);
 
   return (
-    <div className="min-h-screen p-8 transition-colors duration-300 bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen p-6 flex flex-col overflow-hidden transition-colors duration-300 bg-gray-50 dark:bg-gray-900">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -499,7 +500,9 @@ function AppContent() {
         onSidebarOpen={() => setSidebarOpen(true)}
         onNewAnalysis={handleNewAnalysis}
         onKbClick={handleKbNavigate}
+        onSettingsClick={() => setView('settings')}
         exportProgress={exportProgress}
+        isAdmin={userInfo?.isAdmin}
       />
 
       {error && (
@@ -545,6 +548,10 @@ function AppContent() {
           teamsList={teamsList}
           canModifyKb={permissions.canModifyKb}
         />
+      )}
+
+      {view === 'settings' && (
+        <SettingsView />
       )}
 
       {/* Loading Overlay - shows during KB operations (not during file upload which has its own UI) */}

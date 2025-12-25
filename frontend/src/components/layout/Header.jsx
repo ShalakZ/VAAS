@@ -11,10 +11,12 @@ export function Header({
   onSidebarOpen,
   onNewAnalysis,
   onKbClick,
+  onSettingsClick,
   exportProgress,
+  isAdmin,
 }) {
   return (
-    <header className="mb-8 flex flex-col gap-4">
+    <header className="mb-4 flex flex-col gap-3 flex-shrink-0">
       {/* Top row: Logo/Title and Theme Toggle */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3 min-w-0">
@@ -85,6 +87,19 @@ export function Header({
           Knowledge Base
         </button>
 
+        {isAdmin && (
+          <button
+            onClick={onSettingsClick}
+            className={`px-3 py-1 rounded transition-colors ${
+              view === 'settings'
+                ? 'bg-gray-200 dark:bg-gray-700 font-bold dark:text-white'
+                : 'text-blue-600 dark:text-blue-400 hover:underline'
+            }`}
+          >
+            Settings
+          </button>
+        )}
+
         {currentFileName && view === 'review' && (
           <span className="text-gray-600 dark:text-gray-300 font-medium bg-gray-100 dark:bg-gray-800 border dark:border-gray-700 px-3 py-1 rounded text-sm truncate max-w-xs">
             📄 {currentFileName}
@@ -112,5 +127,7 @@ Header.propTypes = {
   onSidebarOpen: PropTypes.func,
   onNewAnalysis: PropTypes.func,
   onKbClick: PropTypes.func,
+  onSettingsClick: PropTypes.func,
   exportProgress: PropTypes.number,
+  isAdmin: PropTypes.bool,
 };

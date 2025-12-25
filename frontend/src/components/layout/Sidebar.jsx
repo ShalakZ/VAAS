@@ -60,39 +60,12 @@ export function Sidebar({
             {userInfo?.isAdmin && (
               <>
                 <hr className="border-gray-200 dark:border-gray-700 my-4" />
-                <div className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Settings
-                </div>
-                <a
-                  href="/settings/users"
+                <button
+                  onClick={() => handleNavClick('settings')}
                   className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium transition-colors duration-200"
                 >
-                  👥 User Management
-                </a>
-                <a
-                  href="/settings/knowledgebase"
-                  className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium transition-colors duration-200"
-                >
-                  📚 Knowledge Base Settings
-                </a>
-                <a
-                  href="/settings/ldap"
-                  className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium transition-colors duration-200"
-                >
-                  🔐 LDAP Settings
-                </a>
-                <a
-                  href="/settings/database"
-                  className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium transition-colors duration-200"
-                >
-                  🗄️ Database Settings
-                </a>
-                <a
-                  href="/settings/logs"
-                  className="block w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium transition-colors duration-200"
-                >
-                  📋 Audit Logs
-                </a>
+                  ⚙️ Settings
+                </button>
               </>
             )}
 

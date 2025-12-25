@@ -141,7 +141,7 @@ export function ReviewView({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col h-[calc(100vh-150px)] border dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col flex-1 min-h-0 border dark:border-gray-700">
       {/* Header Bar */}
       <div className="p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
         <StatsBar
