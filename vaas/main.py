@@ -93,6 +93,26 @@ def create_app():
             filename
         )
 
+    # Security headers middleware
+    @app.after_request
+    def add_security_headers(response):
+        """Add security headers to all responses (OWASP best practices)."""
+        # Prevent MIME type sniffing
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        # Prevent clickjacking
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        # XSS protection (legacy browsers)
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        # Referrer policy
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # Permissions policy (restrict browser features)
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        # Cache control for authenticated pages
+        if response.status_code == 200 and response.content_type and 'text/html' in response.content_type:
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+        return response
+
     # Register Blueprints
     from .web.routes import web_bp
     from .auth.routes import auth_bp

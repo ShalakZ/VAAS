@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 export function Sidebar({
   isOpen,
   onClose,
@@ -125,3 +127,19 @@ export function Sidebar({
     </>
   );
 }
+
+Sidebar.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  theme: PropTypes.oneOf(['light', 'dark']).isRequired,
+  toggleTheme: PropTypes.func.isRequired,
+  onNavigate: PropTypes.func.isRequired,
+  hasData: PropTypes.bool.isRequired,
+  userInfo: PropTypes.shape({
+    authEnabled: PropTypes.bool,
+    isAdmin: PropTypes.bool,
+    username: PropTypes.string,
+    displayName: PropTypes.string,
+    roleDisplay: PropTypes.string,
+  }),
+};

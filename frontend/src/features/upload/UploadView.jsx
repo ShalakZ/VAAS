@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { GearAnimation, ProgressBar } from '../../components/common';
 
 export function UploadView({ loading, progress, progressText, onFileUpload }) {
@@ -60,3 +61,10 @@ export function UploadView({ loading, progress, progressText, onFileUpload }) {
     </div>
   );
 }
+
+UploadView.propTypes = {
+  loading: PropTypes.bool.isRequired,
+  progress: PropTypes.number.isRequired,
+  progressText: PropTypes.string.isRequired,
+  onFileUpload: PropTypes.func.isRequired,
+};

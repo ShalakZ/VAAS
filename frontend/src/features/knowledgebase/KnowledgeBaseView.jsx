@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { Input, Select, Button } from '../../components/common';
 import { useToast } from '../../context';
 
@@ -285,3 +286,23 @@ export function KnowledgeBaseView({
     </div>
   );
 }
+
+KnowledgeBaseView.propTypes = {
+  kbData: PropTypes.shape({
+    hostnames: PropTypes.arrayOf(PropTypes.shape({
+      hostname: PropTypes.string.isRequired,
+      team: PropTypes.string.isRequired,
+    })).isRequired,
+    titles: PropTypes.arrayOf(PropTypes.shape({
+      title: PropTypes.string.isRequired,
+      team: PropTypes.string.isRequired,
+    })).isRequired,
+  }).isRequired,
+  loading: PropTypes.bool,
+  onAddRule: PropTypes.func.isRequired,
+  onEditRule: PropTypes.func.isRequired,
+  onDeleteRule: PropTypes.func.isRequired,
+  onConfirmDelete: PropTypes.func,
+  teamsList: PropTypes.arrayOf(PropTypes.string).isRequired,
+  canModifyKb: PropTypes.bool.isRequired,
+};

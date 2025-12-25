@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Select, ColumnFilterDropdown } from '../../components/common';
 
 export function DataTable({
@@ -182,3 +183,30 @@ export function DataTable({
     </table>
   );
 }
+
+DataTable.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.shape({
+    hostname: PropTypes.string,
+    Title: PropTypes.string,
+    Assigned_Team: PropTypes.string,
+    Reason: PropTypes.string,
+    Method: PropTypes.string,
+    Needs_Review: PropTypes.bool,
+    Pending_Confirmation: PropTypes.bool,
+  })).isRequired,
+  allData: PropTypes.array,
+  sortConfig: PropTypes.shape({
+    key: PropTypes.string,
+    direction: PropTypes.oneOf(['ascending', 'descending']),
+  }).isRequired,
+  onSort: PropTypes.func.isRequired,
+  columnFilters: PropTypes.object.isRequired,
+  onFilterApply: PropTypes.func.isRequired,
+  onRowClick: PropTypes.func.isRequired,
+  onTeamChange: PropTypes.func.isRequired,
+  onConfirmChange: PropTypes.func.isRequired,
+  onConfirmFuzzy: PropTypes.func.isRequired,
+  teamsList: PropTypes.arrayOf(PropTypes.string).isRequired,
+  canModify: PropTypes.bool.isRequired,
+  canModifyKb: PropTypes.bool.isRequired,
+};

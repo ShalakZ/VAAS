@@ -18,6 +18,7 @@ from ..constants import (
 from ..core.logging_config import AuditLogger, LogLevel
 from .ldap_auth import LDAPAuth, User
 from .user_db import UserDB, ROLE_VIEWER, ROLE_SECURITY_ADMIN, ROLE_ADMINISTRATOR, AUTH_TYPE_LOCAL, AUTH_TYPE_LDAP
+from .rate_limit import rate_limit_login, record_login_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +163,7 @@ def create_user_from_db(user_dict):
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@rate_limit_login
 def login():
     """Handle user login - supports both local and LDAP users."""
     # Initialize user database
@@ -220,6 +222,7 @@ def login():
             logger.debug("LDAP not enabled, cannot try LDAP auth")
         
         if user:
+            record_login_attempt(success=True)
             login_user(user)
             AuditLogger.log_auth_event(
                 f"User logged in successfully: {username}",
@@ -230,6 +233,7 @@ def login():
             safe_redirect = get_safe_redirect_url(request.args.get('next'))
             return redirect(safe_redirect)
         else:
+            record_login_attempt(success=False)
             flash('Invalid username or password', 'error')
             logger.warning(f"Failed login attempt for: {username}")
             AuditLogger.log_security_event(

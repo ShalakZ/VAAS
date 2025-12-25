@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Modal, Select } from '../../components/common';
 import { formatDateValue } from '../../utils/dateFormatter';
 
@@ -148,3 +149,14 @@ export function RowDetailModal({
     </Modal>
   );
 }
+
+RowDetailModal.propTypes = {
+  row: PropTypes.object,
+  columnOrder: PropTypes.arrayOf(PropTypes.string),
+  onClose: PropTypes.func.isRequired,
+  onTeamChange: PropTypes.func.isRequired,
+  onConfirmFuzzy: PropTypes.func.isRequired,
+  teamsList: PropTypes.arrayOf(PropTypes.string).isRequired,
+  canModify: PropTypes.bool.isRequired,
+  canModifyKb: PropTypes.bool.isRequired,
+};

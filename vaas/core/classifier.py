@@ -175,6 +175,68 @@ class RuleEngine:
 
         return None, None
 
+    def _find_rule_match(self, title, normalized_title):
+        """
+        Find matching rule in priority order.
+        Returns (matched_team, rule_desc) or (None, None).
+        """
+        # Check System Admin FIRST (highest priority)
+        if self._cached_sysadmin_key:
+            matched_team, rule_desc = self._check_rules_for_team(
+                self._cached_sysadmin_key, title, normalized_title
+            )
+            if matched_team:
+                return matched_team, rule_desc
+
+        # Check Out of Scope
+        if self._cached_scope_key:
+            matched_team, rule_desc = self._check_rules_for_team(
+                self._cached_scope_key, title, normalized_title
+            )
+            if matched_team:
+                return matched_team, rule_desc
+
+        # Check Other Teams (not priority ones)
+        for team in self.rules.keys():
+            if team.strip().lower() in self._priority_teams_lower:
+                continue
+            matched_team, rule_desc = self._check_rules_for_team(team, title, normalized_title)
+            if matched_team:
+                return matched_team, rule_desc
+
+        # Check Application LAST (lowest priority)
+        if self._cached_app_key:
+            matched_team, rule_desc = self._check_rules_for_team(
+                self._cached_app_key, title, normalized_title
+            )
+            if matched_team:
+                return matched_team, rule_desc
+
+        return None, None
+
+    def _try_fuzzy_match(self, title, hostname_lower):
+        """
+        Try fuzzy matching as fallback.
+        Returns result dict or None if no match.
+        """
+        candidates = list(self.fuzzy_candidates.keys())
+        if not candidates:
+            return None
+
+        top_matches = process.extract(title, candidates, scorer=fuzz.token_set_ratio, limit=10)
+        good_matches = [(pat, scr) for pat, scr, _ in top_matches if scr >= FUZZY_THRESHOLD]
+
+        if not good_matches:
+            return None
+
+        categories = self._categorize_fuzzy_matches(good_matches)
+        chosen = self._select_best_fuzzy_match(categories)
+
+        if chosen:
+            return self._apply_fuzzy_match(chosen, hostname_lower)
+
+        return None
+
     def _classify_single_row(self, title, hostname):
         """
         Classify a single row.
@@ -183,148 +245,18 @@ class RuleEngine:
         normalized_title = self._normalize_str(title)
         hostname_lower = hostname.strip().lower() if hostname else ''
 
-        # Default state
-        result = {
-            'Assigned_Team': 'Unclassified',
-            'Reason': 'No matching rule',
-            'Needs_Review': True,
-            'Method': 'None',
-            'Fuzzy_Score': None,
-            'Matched_Rule': None
-        }
-
-        # Performance Optimization: Use cached team keys instead of lookups (5-10% improvement)
-        sysadmin_key = self._cached_sysadmin_key
-        scope_key = self._cached_scope_key
-        app_key = self._cached_app_key
-
-        # --- Step 1: Check Title Rules (exact/substring match) ---
-        matched_team = None
-        rule_desc = None
-
-        # Check System Admin FIRST (highest priority)
-        if sysadmin_key:
-            matched_team, rule_desc = self._check_rules_for_team(sysadmin_key, title, normalized_title)
-
-        # Check Out of Scope
-        if not matched_team and scope_key:
-            matched_team, rule_desc = self._check_rules_for_team(scope_key, title, normalized_title)
-
-        # Check Other Teams (not priority ones)
-        if not matched_team:
-            for team in self.rules.keys():
-                if team.strip().lower() in self._priority_teams_lower:
-                    continue
-                matched_team, rule_desc = self._check_rules_for_team(team, title, normalized_title)
-                if matched_team:
-                    break
-
-        # Check Application LAST (lowest priority)
-        if not matched_team and app_key:
-            matched_team, rule_desc = self._check_rules_for_team(app_key, title, normalized_title)
-
-        # --- Step 2: Apply Logic Based on Matched Rule ---
+        # Step 1: Try rule-based matching
+        matched_team, rule_desc = self._find_rule_match(title, normalized_title)
         if matched_team:
-            team_lower = matched_team.strip().lower()
+            return self._apply_rule_match(matched_team, rule_desc, hostname_lower)
 
-            if team_lower == TEAM_APPLICATION:
-                # Check Hostname mapping for Application vulns
-                host_owner = self.hostname_map.get(hostname_lower)
-
-                if host_owner and host_owner.lower() not in ['nan', 'none', '']:
-                    result['Assigned_Team'] = self._normalize_team_name(host_owner)
-                    result['Reason'] = f"{rule_desc} → Hostname Owner: {host_owner}"
-                    result['Needs_Review'] = False
-                    result['Method'] = 'Rule'
-                    result['Matched_Rule'] = rule_desc
-                else:
-                    result['Assigned_Team'] = 'Application'
-                    result['Reason'] = f"{rule_desc}, but Hostname Owner unknown"
-                    result['Needs_Review'] = True
-                    result['Method'] = 'Rule'
-                    result['Matched_Rule'] = rule_desc
-
-            elif team_lower in [TEAM_SYSADMIN, TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]:
-                result['Assigned_Team'] = self._normalize_team_name(matched_team)
-                result['Reason'] = rule_desc
-                result['Needs_Review'] = False
-                result['Method'] = 'Rule'
-                result['Matched_Rule'] = rule_desc
-
-            else:
-                # Other team matched but not in strict scope
-                result['Assigned_Team'] = 'Unclassified'
-                result['Reason'] = f"Rule matched '{matched_team}' but outside strict scope"
-                result['Needs_Review'] = True
-                result['Method'] = 'Rule'
-                result['Matched_Rule'] = rule_desc
-
-            return result
-
-        # --- Step 3: Fuzzy Matching Fallback ---
-        candidates = list(self.fuzzy_candidates.keys())
-        if candidates:
-            top_matches = process.extract(title, candidates, scorer=fuzz.token_set_ratio, limit=10)
-
-            # Filter by threshold
-            good_matches = [(pat, scr) for pat, scr, _ in top_matches if scr >= FUZZY_THRESHOLD]
-
-            if good_matches:
-                # Categorize by team priority
-                sysadmin_matches = []
-                scope_matches = []
-                other_matches = []
-                app_matches = []
-
-                for pat, scr in good_matches:
-                    team = self.fuzzy_candidates[pat]
-                    team_lower = team.lower() if team else ''
-                    if team_lower == TEAM_SYSADMIN:
-                        sysadmin_matches.append((pat, scr, team))
-                    elif team_lower in [TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]:
-                        scope_matches.append((pat, scr, team))
-                    elif team_lower == TEAM_APPLICATION:
-                        app_matches.append((pat, scr, team))
-                    else:
-                        other_matches.append((pat, scr, team))
-
-                # Pick best match in priority order
-                chosen = None
-                if sysadmin_matches:
-                    chosen = max(sysadmin_matches, key=lambda x: x[1])
-                elif scope_matches:
-                    chosen = max(scope_matches, key=lambda x: x[1])
-                elif other_matches:
-                    chosen = max(other_matches, key=lambda x: x[1])
-                elif app_matches:
-                    chosen = max(app_matches, key=lambda x: x[1])
-
-                if chosen:
-                    match_pattern, score, potential_team = chosen
-                    team_lower = potential_team.lower() if potential_team else ''
-
-                    result['Fuzzy_Score'] = round(score, 1)
-                    result['Matched_Rule'] = match_pattern
-                    result['Method'] = 'Fuzzy'
-                    result['Needs_Review'] = True  # Fuzzy matches always need review
-
-                    # Handle Application fuzzy match - try hostname lookup
-                    if team_lower == TEAM_APPLICATION:
-                        host_owner = self.hostname_map.get(hostname_lower)
-                        if host_owner and host_owner.lower() not in ['nan', 'none', '']:
-                            result['Assigned_Team'] = self._normalize_team_name(host_owner)
-                            result['Reason'] = f"Fuzzy: '{match_pattern[:40]}' ({score:.0f}%) → Hostname: {host_owner}"
-                        else:
-                            result['Assigned_Team'] = 'Application'
-                            result['Reason'] = f"Fuzzy: '{match_pattern[:40]}' ({score:.0f}%), Hostname unknown"
-                    else:
-                        result['Assigned_Team'] = self._normalize_team_name(potential_team)
-                        result['Reason'] = f"Fuzzy: '{match_pattern[:40]}' ({score:.0f}%)"
-
-                    return result
+        # Step 2: Try fuzzy matching as fallback
+        fuzzy_result = self._try_fuzzy_match(title, hostname_lower)
+        if fuzzy_result:
+            return fuzzy_result
 
         # No match found
-        return result
+        return self._get_default_result()
 
     def _normalize_team_name(self, team_name):
         """Normalize team name to standard casing."""
@@ -339,6 +271,143 @@ class RuleEngine:
             TEAM_UNCLASSIFIED: TEAM_UNCLASSIFIED_DISPLAY,
         }
         return standard_names.get(team_lower, team_name)
+
+    def _get_default_result(self):
+        """Create default classification result dict."""
+        return {
+            'Assigned_Team': 'Unclassified',
+            'Reason': 'No matching rule',
+            'Needs_Review': True,
+            'Method': 'None',
+            'Fuzzy_Score': None,
+            'Matched_Rule': None
+        }
+
+    def _apply_hostname_lookup(self, hostname_lower, rule_desc, is_fuzzy=False, fuzzy_pattern=None, fuzzy_score=None):
+        """
+        Apply hostname lookup for Application-category vulnerabilities.
+        Returns (assigned_team, reason, needs_review).
+        """
+        host_owner = self.hostname_map.get(hostname_lower)
+        has_owner = host_owner and host_owner.lower() not in ['nan', 'none', '']
+
+        if is_fuzzy:
+            if has_owner:
+                return (
+                    self._normalize_team_name(host_owner),
+                    f"Fuzzy: '{fuzzy_pattern[:40]}' ({fuzzy_score:.0f}%) → Hostname: {host_owner}",
+                    True
+                )
+            return (
+                'Application',
+                f"Fuzzy: '{fuzzy_pattern[:40]}' ({fuzzy_score:.0f}%), Hostname unknown",
+                True
+            )
+
+        if has_owner:
+            return (
+                self._normalize_team_name(host_owner),
+                f"{rule_desc} → Hostname Owner: {host_owner}",
+                False
+            )
+        return (
+            'Application',
+            f"{rule_desc}, but Hostname Owner unknown",
+            True
+        )
+
+    def _categorize_fuzzy_matches(self, good_matches):
+        """
+        Categorize fuzzy matches by team priority.
+        Returns dict with keys: sysadmin, scope, other, app.
+        """
+        categories = {
+            'sysadmin': [],
+            'scope': [],
+            'other': [],
+            'app': []
+        }
+
+        for pat, scr in good_matches:
+            team = self.fuzzy_candidates[pat]
+            team_lower = team.lower() if team else ''
+
+            if team_lower == TEAM_SYSADMIN:
+                categories['sysadmin'].append((pat, scr, team))
+            elif team_lower in [TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]:
+                categories['scope'].append((pat, scr, team))
+            elif team_lower == TEAM_APPLICATION:
+                categories['app'].append((pat, scr, team))
+            else:
+                categories['other'].append((pat, scr, team))
+
+        return categories
+
+    def _select_best_fuzzy_match(self, categories):
+        """Select best fuzzy match from categorized matches in priority order."""
+        for priority in ['sysadmin', 'scope', 'other', 'app']:
+            if categories[priority]:
+                return max(categories[priority], key=lambda x: x[1])
+        return None
+
+    def _apply_rule_match(self, matched_team, rule_desc, hostname_lower):
+        """
+        Apply rule match to generate classification result.
+        Returns result dict.
+        """
+        result = self._get_default_result()
+        team_lower = matched_team.strip().lower()
+
+        if team_lower == TEAM_APPLICATION:
+            team, reason, needs_review = self._apply_hostname_lookup(hostname_lower, rule_desc)
+            result['Assigned_Team'] = team
+            result['Reason'] = reason
+            result['Needs_Review'] = needs_review
+            result['Method'] = 'Rule'
+            result['Matched_Rule'] = rule_desc
+
+        elif team_lower in [TEAM_SYSADMIN, TEAM_LINUX_SCOPE, TEAM_PLATFORM_SCOPE]:
+            result['Assigned_Team'] = self._normalize_team_name(matched_team)
+            result['Reason'] = rule_desc
+            result['Needs_Review'] = False
+            result['Method'] = 'Rule'
+            result['Matched_Rule'] = rule_desc
+
+        else:
+            result['Assigned_Team'] = 'Unclassified'
+            result['Reason'] = f"Rule matched '{matched_team}' but outside strict scope"
+            result['Needs_Review'] = True
+            result['Method'] = 'Rule'
+            result['Matched_Rule'] = rule_desc
+
+        return result
+
+    def _apply_fuzzy_match(self, chosen, hostname_lower):
+        """
+        Apply fuzzy match to generate classification result.
+        Returns result dict.
+        """
+        result = self._get_default_result()
+        match_pattern, score, potential_team = chosen
+        team_lower = potential_team.lower() if potential_team else ''
+
+        result['Fuzzy_Score'] = round(score, 1)
+        result['Matched_Rule'] = match_pattern
+        result['Method'] = 'Fuzzy'
+        result['Needs_Review'] = True
+
+        if team_lower == TEAM_APPLICATION:
+            team, reason, _ = self._apply_hostname_lookup(
+                hostname_lower, None, is_fuzzy=True,
+                fuzzy_pattern=match_pattern, fuzzy_score=score
+            )
+            result['Assigned_Team'] = team
+            result['Reason'] = reason
+        else:
+            result['Assigned_Team'] = self._normalize_team_name(potential_team)
+            result['Reason'] = f"Fuzzy: '{match_pattern[:40]}' ({score:.0f}%)"
+
+        return result
 
     def predict(self, df):
         """
