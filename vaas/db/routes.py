@@ -8,6 +8,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import current_user
 
 from ..constants import ERROR_ADMIN_REQUIRED
+from ..core.logging_config import AuditLogger, LogLevel, LogCategory
 from .settings import (
     load_database_settings,
     save_database_settings,
@@ -101,6 +102,16 @@ def save_database_settings_api():
     success, message = save_database_settings(settings)
 
     if success:
+        # Log the settings change
+        username = current_user.username if current_user.is_authenticated else 'system'
+        AuditLogger.log(
+            action='Database Settings Updated',
+            details=f"DB type: {settings['DB_TYPE']}" + (f", host: {settings['DB_HOST']}" if settings['DB_TYPE'] != 'sqlite' else ''),
+            username=username,
+            level=LogLevel.WARNING,
+            category=LogCategory.DATABASE
+        )
+
         # Reload the database provider
         try:
             reload_provider()
@@ -186,6 +197,16 @@ def migrate_database_api():
         success, message = migrator.migrate(preserve_source=preserve_sqlite)
 
         if success:
+            # Log the migration
+            username = current_user.username if current_user.is_authenticated else 'system'
+            AuditLogger.log(
+                action='Database Migration',
+                details=f"Migrated from SQLite to external database (preserve_source={preserve_sqlite})",
+                username=username,
+                level=LogLevel.WARNING,
+                category=LogCategory.DATABASE
+            )
+
             # Reload provider to use the new database
             reload_provider()
 
@@ -261,6 +282,17 @@ def update_scheduler_settings():
         success, message = save_database_settings(settings)
 
         if success:
+            # Log the settings change
+            username = current_user.username if current_user.is_authenticated else 'system'
+            status = 'enabled' if settings['AUTO_CLEANUP_ENABLED'] else 'disabled'
+            AuditLogger.log(
+                action='Auto Cleanup Settings Updated',
+                details=f"Auto cleanup {status}, interval: {settings['AUTO_CLEANUP_INTERVAL_DAYS']} days, retention: {settings['AUTO_CLEANUP_RETENTION_DAYS']} days",
+                username=username,
+                level=LogLevel.INFO,
+                category=LogCategory.SYSTEM
+            )
+
             # Restart scheduler with new settings
             from ..core.scheduler import restart_scheduler
             restart_scheduler()
@@ -287,6 +319,18 @@ def run_scheduler_now():
     try:
         from ..core.scheduler import run_cleanup_now
         result = run_cleanup_now()
+
+        if result.get('success', False):
+            # Log the manual cleanup run
+            username = current_user.username if current_user.is_authenticated else 'system'
+            AuditLogger.log(
+                action='Manual Cleanup Executed',
+                details=f"Deleted {result.get('deleted_reports', 0)} old reports",
+                username=username,
+                level=LogLevel.INFO,
+                category=LogCategory.SYSTEM
+            )
+
         return jsonify({
             'success': result.get('success', False),
             'message': result.get('message', 'Cleanup completed'),

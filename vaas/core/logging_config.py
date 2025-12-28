@@ -417,6 +417,49 @@ class AuditLogger:
         """Log an application event."""
         AuditLogger.log_action(LogCategory.APPLICATION, message, level, details)
 
+    @staticmethod
+    def log(
+        action: str,
+        details: str,
+        username: Optional[str] = None,
+        level: str = LogLevel.INFO,
+        category: str = LogCategory.AUDIT
+    ):
+        """
+        Convenience method for logging audit events with action/details format.
+
+        Args:
+            action: Short action name (e.g., 'User Created', 'KB Rule Edited')
+            details: Detailed description of the action
+            username: Override username (uses request context if not provided)
+            level: Log level (use LogLevel constants)
+            category: Log category (use LogCategory constants)
+        """
+        message = f"{action}: {details}"
+
+        # Use provided username or get from context
+        if username is None:
+            username = AuditLogger._get_username()
+
+        context = AuditLogger._get_request_context()
+
+        LogDatabase.write_log(
+            category=category,
+            level=level,
+            message=message,
+            username=username,
+            ip_address=context.get('ip_address'),
+            user_agent=context.get('user_agent'),
+            endpoint=context.get('endpoint'),
+            method=context.get('method'),
+            details={'action': action, 'details': details}
+        )
+
+        # Also log to standard logger
+        logger = logging.getLogger(f'vaas.{category}')
+        log_method = getattr(logger, level.lower(), logger.info)
+        log_method(f"[{username}] {message}")
+
 
 def setup_file_logging(app):
     """

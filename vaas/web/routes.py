@@ -1025,17 +1025,40 @@ def cleanup_database():
             vacuum=vacuum
         )
 
-        # Log the cleanup action
-        AuditLogger.log_app_event(
-            f"Database cleanup performed by {current_user.username}",
+        # Log specific action with clear description
+        username = current_user.username if current_user.is_authenticated else 'system'
+
+        # Determine which action was performed and log it specifically
+        if delete_old and not delete_duplicates and not vacuum:
+            action = 'Delete Old Reports'
+            details = f"Deleted {results.get('deleted_reports', 0)} reports older than {retention_days} days"
+        elif delete_duplicates and not delete_old and not vacuum:
+            action = 'Remove Duplicates'
+            details = f"Removed {results.get('duplicates_removed', 0)} duplicate entries"
+        elif vacuum and not delete_old and not delete_duplicates:
+            action = 'Optimize Database'
+            details = f"Database optimization {'successful' if results.get('vacuum_success') else 'completed'}"
+        elif delete_old and delete_duplicates and vacuum:
+            action = 'Full Maintenance'
+            details = f"Deleted {results.get('deleted_reports', 0)} old reports, removed {results.get('duplicates_removed', 0)} duplicates, optimized database"
+        else:
+            # Mixed operations
+            actions = []
+            if delete_old:
+                actions.append(f"deleted {results.get('deleted_reports', 0)} old reports")
+            if delete_duplicates:
+                actions.append(f"removed {results.get('duplicates_removed', 0)} duplicates")
+            if vacuum:
+                actions.append("optimized database")
+            action = 'Database Maintenance'
+            details = ', '.join(actions).capitalize() if actions else 'Maintenance completed'
+
+        AuditLogger.log(
+            action=action,
+            details=details,
+            username=username,
             level=LogLevel.INFO,
-            details={
-                'delete_old': delete_old,
-                'retention_days': retention_days,
-                'delete_duplicates': delete_duplicates,
-                'vacuum': vacuum,
-                'results': results
-            }
+            category=LogCategory.SYSTEM
         )
 
         return jsonify(results)
@@ -1058,9 +1081,13 @@ def vacuum_database():
         success, message = DatabaseOptimizer.vacuum_database()
 
         if success:
-            AuditLogger.log_app_event(
-                f"Database optimized by {current_user.username}",
-                level=LogLevel.INFO
+            username = current_user.username if current_user.is_authenticated else 'system'
+            AuditLogger.log(
+                action='Optimize Database',
+                details='Database vacuum and optimization completed successfully',
+                username=username,
+                level=LogLevel.INFO,
+                category=LogCategory.SYSTEM
             )
 
         return jsonify({'success': success, 'message': message})
