@@ -15,7 +15,7 @@ from ..constants import (
     ROUTE_INDEX, ROUTE_LOGIN, LDAP_DEFAULT_USER_FILTER, REDACTED_FIELD_DISPLAY,
     ERROR_ADMIN_REQUIRED, ERROR_INVALID_ROLE
 )
-from ..core.logging_config import AuditLogger, LogLevel
+from ..core.logging_config import AuditLogger, LogLevel, LogCategory
 from .ldap_auth import LDAPAuth, User
 from .user_db import UserDB, ROLE_VIEWER, ROLE_SECURITY_ADMIN, ROLE_ADMINISTRATOR, AUTH_TYPE_LOCAL, AUTH_TYPE_LDAP
 from .rate_limit import rate_limit_login, record_login_attempt
@@ -324,7 +324,16 @@ def create_user_api():
         role=role,
         auth_type=AUTH_TYPE_LOCAL
     )
-    
+
+    if success:
+        AuditLogger.log(
+            action='User Created',
+            details=f"Created user: {username} ({role})",
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.INFO,
+            category=LogCategory.SECURITY
+        )
+
     return jsonify({'success': success, 'message': message})
 
 
@@ -351,7 +360,16 @@ def update_user_api(user_id):
         role=role,
         is_active=is_active
     )
-    
+
+    if success:
+        AuditLogger.log(
+            action='User Updated',
+            details=f"Updated user ID {user_id}: role={role}, active={is_active}",
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.INFO,
+            category=LogCategory.SECURITY
+        )
+
     return jsonify({'success': success, 'message': message})
 
 
@@ -365,8 +383,18 @@ def delete_user_api(user_id):
     # Don't allow deleting yourself
     if current_user.is_authenticated and current_user.user_id == user_id:
         return jsonify({'success': False, 'message': 'Cannot delete your own account'}), 400
-    
+
     success, message = UserDB.delete_user(user_id)
+
+    if success:
+        AuditLogger.log(
+            action='User Deleted',
+            details=f"Deleted user ID {user_id}",
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.WARNING,
+            category=LogCategory.SECURITY
+        )
+
     return jsonify({'success': success, 'message': message})
 
 
@@ -387,8 +415,19 @@ def change_password_api(user_id):
         return jsonify({'success': False, 'message': 'Password must be at least 8 characters'}), 400
     if len(new_password) > 128:
         return jsonify({'success': False, 'message': 'Password must not exceed 128 characters'}), 400
-    
+
     success, message = UserDB.change_password(user_id, new_password)
+
+    if success:
+        is_self = current_user.is_authenticated and current_user.user_id == user_id
+        AuditLogger.log(
+            action='Password Changed',
+            details=f"Password changed for user ID {user_id}" + (" (self)" if is_self else " (by admin)"),
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.INFO,
+            category=LogCategory.SECURITY
+        )
+
     return jsonify({'success': success, 'message': message})
 
 
@@ -439,10 +478,17 @@ def save_ldap_settings_api():
     }
     
     success, message = save_ldap_settings(settings)
-    
+
     if success:
         get_ldap_auth()
-    
+        AuditLogger.log(
+            action='LDAP Settings Updated',
+            details=f"LDAP settings saved (enabled={settings['LDAP_ENABLED']}, host={settings['LDAP_HOST']})",
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.WARNING,
+            category=LogCategory.SECURITY
+        )
+
     return jsonify({'success': success, 'message': message})
 
 
@@ -551,7 +597,14 @@ def import_ad_user():
         role=role,
         auth_type=AUTH_TYPE_LDAP
     )
-    
+
     if success:
+        AuditLogger.log(
+            action='LDAP User Imported',
+            details=f"Imported AD user: {username} ({role})",
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.INFO,
+            category=LogCategory.SECURITY
+        )
         return jsonify({'success': True, 'message': f"User '{username}' imported from AD with role '{role}'"})
     return jsonify({'success': False, 'message': message}), 400

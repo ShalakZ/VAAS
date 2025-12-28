@@ -10,17 +10,6 @@ const LEVELS = ['all', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
 const PER_PAGE_OPTIONS = [50, 100, 200, 500];
 const QUICK_FILTERS = ['all', 'audit', 'security', 'auth', 'application', 'database', 'system'];
 
-// Demo logs for when API is not available
-const DEMO_LOGS = [
-  { id: 1, timestamp: new Date().toISOString(), username: 'admin', action: 'Login', details: 'User logged in successfully', type: 'auth', level: 'INFO', category: 'security' },
-  { id: 2, timestamp: new Date(Date.now() - 3600000).toISOString(), username: 'admin', action: 'KB Rule Added', details: 'Added hostname rule: db-server-01 to Database Team', type: 'kb', level: 'INFO', category: 'audit' },
-  { id: 3, timestamp: new Date(Date.now() - 7200000).toISOString(), username: 'secadmin', action: 'File Upload', details: 'Uploaded vulnerability_report_Q4.xlsx (1,234 rows)', type: 'upload', level: 'INFO', category: 'application' },
-  { id: 4, timestamp: new Date(Date.now() - 10800000).toISOString(), username: 'admin', action: 'Export', details: 'Exported master report (1,234 rows)', type: 'export', level: 'INFO', category: 'application' },
-  { id: 5, timestamp: new Date(Date.now() - 14400000).toISOString(), username: 'viewer', action: 'Login', details: 'User logged in successfully', type: 'auth', level: 'INFO', category: 'security' },
-  { id: 6, timestamp: new Date(Date.now() - 18000000).toISOString(), username: 'admin', action: 'User Created', details: 'Created user: secadmin (Security Admin)', type: 'user', level: 'INFO', category: 'audit' },
-  { id: 7, timestamp: new Date(Date.now() - 86400000).toISOString(), username: 'secadmin', action: 'KB Rule Edited', details: 'Modified title rule: SQL Injection to System Admin', type: 'kb', level: 'INFO', category: 'audit' },
-  { id: 8, timestamp: new Date(Date.now() - 172800000).toISOString(), username: 'admin', action: 'Settings Changed', details: 'Updated LDAP configuration', type: 'settings', level: 'WARNING', category: 'system' },
-];
 
 /**
  * Audit logs panel for viewing system activity
@@ -142,11 +131,11 @@ export function LogsPanel() {
         setLogsByLevel(s.by_level || {});
       }
     } catch (err) {
-      console.error('Failed to fetch log statistics');
+      console.error('Failed to fetch log statistics:', err);
       setStats({
-        total_logs: DEMO_LOGS.length,
-        last_24h: DEMO_LOGS.filter(l => new Date(l.timestamp) > new Date(Date.now() - 86400000)).length,
-        db_size_mb: 0.5,
+        total_logs: 0,
+        last_24h: 0,
+        db_size_mb: 0,
         active_filters: countActiveFilters(),
       });
     }
@@ -168,25 +157,25 @@ export function LogsPanel() {
 
       const res = await fetch(`/settings/api/logs?${params}`);
       const data = await res.json();
-      if (data.success && data.logs?.length > 0) {
-        setLogs(data.logs);
+      if (data.success) {
+        setLogs(data.logs || []);
         setPagination(prev => ({
           ...prev,
-          total: data.total || data.logs.length,
-          totalPages: Math.ceil((data.total || data.logs.length) / prev.perPage),
+          total: data.total || 0,
+          totalPages: Math.ceil((data.total || 0) / prev.perPage) || 1,
         }));
       } else {
-        setLogs(DEMO_LOGS);
+        setLogs([]);
         setPagination(prev => ({
           ...prev,
-          total: DEMO_LOGS.length,
+          total: 0,
           totalPages: 1,
         }));
       }
     } catch (err) {
-      console.error('Failed to load logs, using demo data');
-      setLogs(DEMO_LOGS);
-      setPagination(prev => ({ ...prev, total: DEMO_LOGS.length, totalPages: 1 }));
+      console.error('Failed to load logs:', err);
+      setLogs([]);
+      setPagination(prev => ({ ...prev, total: 0, totalPages: 1 }));
     } finally {
       setLoading(false);
     }

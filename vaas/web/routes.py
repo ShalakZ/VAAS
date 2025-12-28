@@ -731,6 +731,13 @@ def edit_rule():
 
     if success:
         classifier.reload_rules()
+        AuditLogger.log(
+            action='KB Rule Edited',
+            details=f"Edited {rule_type} rule: '{old_key}' → '{new_key}' ({new_team})",
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.INFO,
+            category=LogCategory.AUDIT
+        )
         return jsonify({'success': True, 'message': msg})
     else:
         return jsonify({'success': False, 'message': msg}), 500
@@ -755,6 +762,13 @@ def delete_rule():
 
     if success:
         classifier.reload_rules()
+        AuditLogger.log(
+            action='KB Rule Deleted',
+            details=f"Deleted {rule_type} rule: '{key}'",
+            username=current_user.username if current_user.is_authenticated else 'system',
+            level=LogLevel.WARNING,
+            category=LogCategory.AUDIT
+        )
         return jsonify({'success': True, 'message': msg})
     else:
         return jsonify({'success': False, 'message': msg}), 500
@@ -767,6 +781,13 @@ def export_kb():
         output_file = os.path.join(Config.DATA_DIR, 'knowledge_base.xlsx')
         success, msg = KnowledgeBase.export_db_to_excel(output_file)
         if success:
+            AuditLogger.log(
+                action='KB Export',
+                details='Exported Knowledge Base to Excel',
+                username=current_user.username if current_user.is_authenticated else 'system',
+                level=LogLevel.INFO,
+                category=LogCategory.AUDIT
+            )
             return send_file(output_file, as_attachment=True, download_name='knowledge_base.xlsx')
         else:
             return jsonify({'error': msg}), 500
@@ -806,6 +827,16 @@ def import_kb():
 
             # Add mode info to message
             mode_desc = "merged with existing" if mode == 'merge' else "replaced all existing"
+
+            # Audit log the import
+            AuditLogger.log(
+                action='KB Import',
+                details=f"Imported Knowledge Base from {file.filename} ({mode_desc} rules)",
+                username=current_user.username if current_user.is_authenticated else 'system',
+                level=LogLevel.INFO,
+                category=LogCategory.AUDIT
+            )
+
             return jsonify({'success': True, 'message': f"{msg} (Mode: {mode_desc} rules)"})
         else:
              return jsonify({'error': msg}), 500
@@ -859,6 +890,13 @@ def delete_report(report_uuid):
     try:
         success, message = ReportsDB.delete_report(report_uuid)
         if success:
+            AuditLogger.log(
+                action='Report Deleted',
+                details=f"Deleted report: {report_uuid}",
+                username=current_user.username if current_user.is_authenticated else 'system',
+                level=LogLevel.WARNING,
+                category=LogCategory.AUDIT
+            )
             return jsonify({'success': True, 'message': message})
         else:
             return jsonify({'success': False, 'error': message}), 404
