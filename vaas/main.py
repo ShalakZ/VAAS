@@ -141,7 +141,6 @@ def create_app():
 
     # Create necessary directories
     os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
-    os.makedirs(Config.HISTORICAL_DIR, exist_ok=True)
     os.makedirs(Config.OUTPUTS_DIR, exist_ok=True)
     os.makedirs(os.path.join(Config.DATA_DIR, 'logs'), exist_ok=True)
 
