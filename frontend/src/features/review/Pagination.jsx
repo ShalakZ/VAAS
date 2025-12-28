@@ -1,5 +1,4 @@
 import PropTypes from 'prop-types';
-import { Select } from '../../components/common';
 
 export function Pagination({
   currentPage,

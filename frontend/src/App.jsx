@@ -439,19 +439,6 @@ function AppContent() {
     });
   }, [executeDeleteRule]);
 
-  const handleKbUpload = useCallback(async (file) => {
-    setLoading(true);
-    try {
-      const result = await kbService.importKb(file);
-      toast.success(result.message + ' Page will reload to reflect changes.');
-      setTimeout(() => globalThis.location.reload(), 1500);
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
   // Execute new analysis (called after user confirms)
   const executeNewAnalysis = useCallback(() => {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));

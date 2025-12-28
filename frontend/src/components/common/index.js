@@ -8,6 +8,5 @@ export { LoadingOverlay } from './LoadingOverlay';
 export { ProgressBar, ExportButton } from './ProgressBar';
 export { ErrorBoundary } from './ErrorBoundary';
 export { ToastContainer } from './Toast';
-export { Skeleton, TableSkeleton } from './Skeleton';
 export { WorkflowSteps } from './WorkflowSteps';
 export { ColumnFilterDropdown } from './ColumnFilterDropdown';

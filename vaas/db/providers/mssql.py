@@ -129,9 +129,6 @@ class MSSQLProvider(DatabaseProvider):
             cursor.close()
             conn.close()
 
-            # Extract just the version line
-            version_line = version.split('\n')[0] if '\n' in version else version
-
             # Determine if Azure SQL or on-prem
             if 'Azure' in version:
                 db_type = "Azure SQL"
