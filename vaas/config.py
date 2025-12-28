@@ -14,7 +14,6 @@ class Config:
 
     # Directory structure
     UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
-    HISTORICAL_DIR = os.path.join(DATA_DIR, 'historical')
     OUTPUTS_DIR = os.path.join(DATA_DIR, 'outputs')
 
     # Knowledge Base files

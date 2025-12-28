@@ -4,7 +4,7 @@ set -e
 DATA_DIR="${VAAS_DATA_DIR:-/app/data}"
 
 # Create data directories if they don't exist
-mkdir -p "$DATA_DIR/uploads" "$DATA_DIR/outputs" "$DATA_DIR/logs" "$DATA_DIR/historical"
+mkdir -p "$DATA_DIR/uploads" "$DATA_DIR/outputs" "$DATA_DIR/logs"
 
 # Initialize config files from examples if they don't exist
 if [ ! -f "$DATA_DIR/database_settings.json" ]; then

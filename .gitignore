@@ -42,11 +42,9 @@ Thumbs.db
 data/uploads/*
 data/outputs/*
 data/logs/*
-data/historical/*
 !data/uploads/.gitkeep
 !data/outputs/.gitkeep
 !data/logs/.gitkeep
-!data/historical/.gitkeep
 
 # Config files (use .example as templates)
 data/database_settings.json

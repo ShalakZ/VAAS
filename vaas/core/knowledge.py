@@ -1,5 +1,4 @@
 import os
-import glob
 import logging
 from rapidfuzz import process, fuzz
 import pandas as pd
@@ -123,35 +122,6 @@ class KnowledgeBase:
                     logger.error(f"Failed to migrate rules: {e}")
 
             conn.commit()
-
-    @staticmethod
-    def ingest_historical_data(directory):
-        """Scanning directory for {TEAM}_*.xlsx files."""
-        all_dfs = []
-        files = glob.glob(os.path.join(directory, '*.xlsx'))
-        logger.debug(f"Found {len(files)} historical files in {directory}")
-
-        for f in files:
-            filename = os.path.basename(f)
-            team_label = filename.split('_')[0]
-            try:
-                df = pd.read_excel(f)
-                df['team_label'] = team_label
-                all_dfs.append(df)
-            except Exception as e:
-                logger.error(f"Error reading {f}: {e}")
-
-        if not all_dfs:
-            return pd.DataFrame()
-
-        master_df = pd.concat(all_dfs, ignore_index=True)
-        text_cols = ['Title', 'hostname', 'DNS', 'Zone', 'Function', 'Category', 'OS']
-        for col in text_cols:
-            if col in master_df.columns:
-                master_df[col] = master_df[col].fillna('').astype(str)
-            else:
-                master_df[col] = ''
-        return master_df
 
     # --- DB Wrappers for Hostnames ---
 
