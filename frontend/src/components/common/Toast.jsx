@@ -25,28 +25,28 @@ const icons = {
 
 const styles = {
   success: {
-    container: 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800',
+    container: 'bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-700',
     icon: 'text-green-600 dark:text-green-400',
     title: 'text-green-800 dark:text-green-200',
     message: 'text-green-700 dark:text-green-300',
     close: 'text-green-500 hover:text-green-700 dark:text-green-400 dark:hover:text-green-200',
   },
   error: {
-    container: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800',
+    container: 'bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-700',
     icon: 'text-red-600 dark:text-red-400',
     title: 'text-red-800 dark:text-red-200',
     message: 'text-red-700 dark:text-red-300',
     close: 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200',
   },
   warning: {
-    container: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800',
+    container: 'bg-yellow-50 dark:bg-yellow-900 border-yellow-200 dark:border-yellow-700',
     icon: 'text-yellow-600 dark:text-yellow-400',
     title: 'text-yellow-800 dark:text-yellow-200',
     message: 'text-yellow-700 dark:text-yellow-300',
     close: 'text-yellow-500 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-200',
   },
   info: {
-    container: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800',
+    container: 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700',
     icon: 'text-blue-600 dark:text-blue-400',
     title: 'text-blue-800 dark:text-blue-200',
     message: 'text-blue-700 dark:text-blue-300',
