@@ -431,6 +431,10 @@ class RuleEngine:
         }
         df = df.rename(columns=col_map)
 
+        # Drop duplicate columns that result from multiple source columns mapping to the same name
+        # (e.g. file has both 'Title' and 'QID', both renamed to 'Title') - keep first occurrence
+        df = df.loc[:, ~df.columns.duplicated(keep='first')]
+
         # Track which columns were renamed for ordering
         renamed_columns = [col_map.get(c, c) for c in original_columns]
 
