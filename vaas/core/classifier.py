@@ -419,20 +419,52 @@ class RuleEngine:
         Returns:
             DataFrame with classification columns added (preserving original column order)
         """
-        # Store original column order before any modifications
+        # Strip whitespace from column names and store original order
+        df.columns = [str(c).strip() for c in df.columns]
         original_columns = list(df.columns)
 
-        # Normalize column names (map common variations to standard names)
-        col_map = {
-            'Hostname': 'hostname', 'DNS Name': 'hostname', 'Computer Name': 'hostname',
-            'Vulnerability': 'Title', 'Name': 'Title', 'Vulnerability Title': 'Title',
-            'QID': 'Title',
-            'OS Name': 'OS', 'Operating System': 'OS'
-        }
-        df = df.rename(columns=col_map)
+        # Case-insensitive column resolution for Title and hostname.
+        # Build a lookup: lowercase column name -> actual column name in df
+        col_lower = {c.lower(): c for c in df.columns}
 
-        # Drop duplicate columns that result from multiple source columns mapping to the same name
-        # (e.g. file has both 'Title' and 'QID', both renamed to 'Title') - keep first occurrence
+        # Title candidates (priority order - first match wins)
+        title_candidates = ['title', 'vulnerability title', 'vulnerability', 'name', 'qid']
+        # Hostname candidates (priority order - first match wins)
+        hostname_candidates = ['hostname', 'dns name', 'dns', 'computer name', 'ip']
+        # OS candidates
+        os_candidates = ['os', 'os name', 'operating system']
+
+        def resolve_col(candidates, target):
+            """Return rename map entry if a candidate exists and isn't already named target."""
+            for c in candidates:
+                if c in col_lower and col_lower[c].lower() != target.lower():
+                    return col_lower[c]
+                elif c in col_lower and col_lower[c] == target:
+                    return None  # already correct name
+            return None
+
+        col_map = {}
+
+        # Only map if the exact target column doesn't already exist
+        if 'Title' not in df.columns:
+            src = resolve_col(title_candidates, 'Title')
+            if src:
+                col_map[src] = 'Title'
+
+        if 'hostname' not in df.columns:
+            src = resolve_col(hostname_candidates, 'hostname')
+            if src:
+                col_map[src] = 'hostname'
+
+        if 'OS' not in df.columns:
+            src = resolve_col(os_candidates, 'OS')
+            if src:
+                col_map[src] = 'OS'
+
+        if col_map:
+            df = df.rename(columns=col_map)
+
+        # Drop any duplicate column names (keep first occurrence)
         df = df.loc[:, ~df.columns.duplicated(keep='first')]
 
         # Track which columns were renamed for ordering
